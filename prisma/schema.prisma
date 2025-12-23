@@ -1,0 +1,246 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  STAFF
+  VIEWER
+}
+
+model Tenant {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  name      String   @db.VarChar(191)
+  slug      String   @unique @db.VarChar(63)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  domains    Domain[]
+  users      UserTenant[]
+
+  members     Member[]
+  leaders     Leader[]
+  attendances Attendance[]
+  finances    Finance[]
+  smsTemplates SmsTemplate[]
+
+  incomeCategories     IncomeCategory[]
+  expenseCategories    ExpenseCategory[]
+  eventCategories      EventCategory[]
+  churchUnitCategories ChurchUnitCategory[]
+
+  @@index([slug])
+}
+
+model Domain {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+  hostname  String   @unique @db.VarChar(191)
+  isPrimary Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model User {
+  id           String   @id @default(cuid()) @db.VarChar(30)
+  name         String?  @db.VarChar(191)
+  email        String   @unique @db.VarChar(191)
+  passwordHash String   @db.VarChar(191)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenants UserTenant[]
+}
+
+model UserTenant {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  userId    String   @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+  role      UserRole @default(STAFF)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+
+model Member {
+  id              String   @id @default(cuid()) @db.VarChar(30)
+  tenantId        String   @db.VarChar(30)
+
+  firstName       String   @db.VarChar(191)
+  lastName        String?  @db.VarChar(191)
+  gender          String?  @db.VarChar(32)
+
+  mobileNumber    String?  @db.VarChar(32)
+  email           String?  @db.VarChar(191)
+
+  dateOfBirth     DateTime?
+  anniversaryDate DateTime?
+
+  churchUnit      String?  @db.VarChar(191)
+  churchLeader    String?  @db.VarChar(191)
+
+  customFields    Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, email])
+  @@index([tenantId, mobileNumber])
+}
+
+model Leader {
+  id           String   @id @default(cuid()) @db.VarChar(30)
+  tenantId     String   @db.VarChar(30)
+
+  firstName    String   @db.VarChar(191)
+  lastName     String   @db.VarChar(191)
+
+  mobileNumber String   @db.VarChar(32)
+  email        String   @db.VarChar(191)
+
+  churchUnit   String   @db.VarChar(191)
+  membersCount Int      @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Attendance {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+
+  men       Int
+  women     Int
+  children  Int
+  date      DateTime
+
+  event     String   @db.VarChar(191)
+  total     Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, date])
+}
+
+model Finance {
+  id          String   @id @default(cuid()) @db.VarChar(30)
+  tenantId    String   @db.VarChar(30)
+
+  amount      Decimal  @db.Decimal(10, 2)
+  type        String   @db.VarChar(32) // "income" | "expense"
+  category    String?  @db.VarChar(180)
+  description String?  @db.VarChar(191)
+  date        DateTime
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, date])
+  @@index([tenantId, type])
+  @@index([tenantId, category])
+}
+
+model SmsTemplate {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+
+  name      String   @db.VarChar(191)
+  message   String   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model IncomeCategory {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+
+  name      String   @db.VarChar(191)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model ExpenseCategory {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+
+  name      String   @db.VarChar(191)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model EventCategory {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+
+  name      String   @db.VarChar(191)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model ChurchUnitCategory {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+
+  name      String   @db.VarChar(191)
+  alias     String   @db.VarChar(191)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, alias])
+  @@index([tenantId])
+}
