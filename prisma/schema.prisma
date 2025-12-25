@@ -16,6 +16,14 @@ enum UserRole {
   VIEWER
 }
 
+enum SmsProvider {
+  TEXTLOCAL
+  TWILIO
+  INFOBIP
+  VONAGE
+  OTHER
+}
+
 model Tenant {
   id        String   @id @default(cuid()) @db.VarChar(30)
   name      String   @db.VarChar(191)
@@ -23,8 +31,8 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  domains    Domain[]
-  users      UserTenant[]
+  domains Domain[]
+  users   UserTenant[]
 
   members     Member[]
   leaders     Leader[]
@@ -36,6 +44,9 @@ model Tenant {
   expenseCategories    ExpenseCategory[]
   eventCategories      EventCategory[]
   churchUnitCategories ChurchUnitCategory[]
+
+  // ✅ One-to-one (optional) provider settings per tenant
+  smsProviderSetting SmsProviderSetting?
 
   @@index([slug])
 }
@@ -70,6 +81,13 @@ model UserTenant {
   role      UserRole @default(STAFF)
   createdAt DateTime @default(now())
 
+  // Fine-grained permissions (for STAFF / VIEWER)
+  canMembers    Boolean @default(false)
+  canLeaders    Boolean @default(false)
+  canAttendance Boolean @default(false)
+  canFinance    Boolean @default(false)
+  canSms        Boolean @default(false) // dashboard send SMS / bulk SMS
+
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -77,7 +95,6 @@ model UserTenant {
   @@index([tenantId])
   @@index([userId])
 }
-
 
 model Member {
   id              String   @id @default(cuid()) @db.VarChar(30)
@@ -244,3 +261,54 @@ model ChurchUnitCategory {
   @@unique([tenantId, alias])
   @@index([tenantId])
 }
+
+model SmsProviderSetting {
+  // ✅ Make this a strict "one row per tenant"
+  tenantId String @id @db.VarChar(30)
+
+  provider SmsProvider @default(TEXTLOCAL)
+
+  // Encrypted secret stored server-side (apiKey/token)
+  apiKeyEnc Bytes?
+  apiKeyIv  Bytes?
+  apiKeyTag Bytes?
+
+  senderId String? @db.VarChar(64)
+  from     String? @db.VarChar(64) // Twilio "From" number, etc.
+  baseUrl  String? @db.VarChar(191)
+  meta     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+enum SmsSendStatus {
+  SENT
+  FAILED
+}
+
+model SmsLog {
+  id         String        @id @default(cuid()) @db.VarChar(30)
+
+  tenantId   String        @db.VarChar(30)
+  templateId String?       @db.VarChar(30)
+  memberId   String?       @db.VarChar(30)
+
+  to         String        @db.VarChar(64)
+  message    String        @db.Text
+  status     SmsSendStatus
+  error      String?       @db.Text
+
+  provider   SmsProvider?
+  tag        String?       @db.VarChar(191)
+
+  createdAt  DateTime      @default(now())
+
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, templateId])
+  @@index([tenantId, memberId])
+}
+

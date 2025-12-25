@@ -1,32 +1,53 @@
+// src/lib/guards.ts
 import { redirect } from "next/navigation";
 import { getSession } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/prisma";
 import type { UserRole } from "@prisma/client";
 
-export type GuardResult = {
-  session: {
-    userId: string;
-    tenantId: string;
-    role: UserRole;
-  };
-  tenant: {
-    id: string;
-    name: string;
-    slug: string;
-  };
+export type GuardSession = {
+  userId: string;
+  tenantId: string;
   role: UserRole;
 };
 
-export async function requireSession(): Promise<GuardResult["session"]> {
+export type GuardTenant = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type GuardResult = {
+  session: GuardSession;
+  tenant: GuardTenant;
+  role: UserRole;
+};
+
+export type GuardResultWithUserTenant = GuardResult & {
+  ut: {
+    role: UserRole;
+    canMembers: boolean;
+    canLeaders: boolean;
+    canAttendance: boolean;
+    canFinance: boolean;
+    canSms: boolean;
+  };
+};
+
+export function isAdminRole(role: UserRole) {
+  return role === "OWNER" || role === "ADMIN";
+}
+
+export async function requireSession(): Promise<GuardSession> {
   const session = await getSession();
   if (!session) redirect("/login");
 
+  // payload is coming from JWT; validate shape
   if (!session.userId || !session.tenantId || !session.role) redirect("/login");
 
   return {
     userId: session.userId,
     tenantId: session.tenantId,
-    role: session.role,
+    role: session.role as UserRole,
   };
 }
 
@@ -40,15 +61,35 @@ export async function requireTenant(): Promise<GuardResult> {
 
   if (!tenant) redirect("/login");
 
-  // role is already in the session cookie (your login sets it)
   const role = session.role;
 
   return { session, tenant, role };
 }
 
-export async function requireAdmin(): Promise<GuardResult> {
+export async function requireTenantWithUserTenant(): Promise<GuardResultWithUserTenant> {
   const ctx = await requireTenant();
-  const isAdmin = ctx.role === "OWNER" || ctx.role === "ADMIN";
-  if (!isAdmin) redirect("/app");
+
+  const ut = await prisma.userTenant.findUnique({
+    where: {
+      userId_tenantId: { userId: ctx.session.userId, tenantId: ctx.tenant.id },
+    },
+    select: {
+      role: true,
+      canMembers: true,
+      canLeaders: true,
+      canAttendance: true,
+      canFinance: true,
+      canSms: true,
+    },
+  });
+
+  if (!ut) redirect("/login");
+
+  return { ...ctx, ut };
+}
+
+export async function requireAdmin(): Promise<GuardResultWithUserTenant> {
+  const ctx = await requireTenantWithUserTenant();
+  if (!isAdminRole(ctx.ut.role)) redirect("/app");
   return ctx;
 }

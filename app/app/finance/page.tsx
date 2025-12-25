@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
+import { requirePermission } from "@/src/lib/permissions";
 
 type SearchParams = { q?: string; type?: string };
 
 export default async function FinancePage(props: { searchParams: Promise<SearchParams> | SearchParams }) {
   const { tenant } = await requireTenant();
+  await requirePermission("finance");
 
   // ✅ Next 16.1 may provide searchParams as a Promise — unwrap safely
   const sp = (await (props.searchParams as any)) as SearchParams;

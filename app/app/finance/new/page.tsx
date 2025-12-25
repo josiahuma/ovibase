@@ -1,10 +1,11 @@
+// app/app/finance/new/page.tsx
 import Link from "next/link";
-import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
 import FinanceNewForm from "./FinanceNewForm";
+import { requirePermission } from "@/src/lib/permissions";
 
 export default async function NewFinancePage() {
-  const { tenant } = await requireTenant();
+  const { tenant } = await requirePermission("finance");
 
   const [incomeCategories, expenseCategories] = await Promise.all([
     prisma.incomeCategory.findMany({

@@ -1,54 +1,104 @@
-"use client";
+// ovibase/app/login/page.tsx
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getTenantFromRequest, buildTenantUrl } from "@/src/lib/tenant";
+import TenantLoginForm from "./tenant-login-form";
 
-import { useState } from "react";
+async function continueToWorkspace(formData: FormData) {
+  "use server";
 
-export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const workspace = String(formData.get("workspace") ?? "").trim().toLowerCase();
+  if (!workspace) redirect("/login?error=Enter your workspace name.");
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setErr(null);
-    setLoading(true);
+  redirect(buildTenantUrl(workspace, "/login"));
+}
 
-    const form = new FormData(e.currentTarget);
-    const payload = {
-      email: String(form.get("email") || "").toLowerCase(),
-      password: String(form.get("password") || ""),
-    };
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }> | { error?: string };
+}) {
+  const tenant = await getTenantFromRequest();
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+  // ✅ Next.js (newer) can treat searchParams as async
+  const sp =
+    searchParams && typeof (searchParams as any).then === "function"
+      ? await (searchParams as Promise<{ error?: string }>)
+      : (searchParams as { error?: string } | undefined);
 
-    const data = await res.json();
-    setLoading(false);
+  const error = sp?.error;
 
-    if (!res.ok) {
-      setErr(data?.error || "Login failed");
-      return;
-    }
+  // ✅ TENANT MODE: show email/password
+  if (tenant) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="text-lg font-semibold text-slate-900">Login</div>
+          <div className="text-sm text-slate-500 mt-1">
+            Workspace:{" "}
+            <span className="font-medium text-slate-800">{tenant.name}</span>
+          </div>
 
-    window.location.href = "/app";
+          {error ? (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
+
+          <div className="mt-5">
+            <TenantLoginForm />
+          </div>
+
+          <div className="mt-4 text-xs text-slate-500">
+            Need a different workspace?{" "}
+            <Link className="underline" href={`http://ovibase.local:3000/login`}>
+              Go to workspace chooser
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
+  // ✅ ROOT MODE: workspace chooser
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-bold">Login</h1>
-      <p className="text-sm text-gray-600 mt-1">Login to your workspace.</p>
+    <div className="min-h-screen bg-white flex items-center justify-center p-6">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="text-lg font-semibold text-slate-900">Login</div>
+        <div className="text-sm text-slate-500 mt-1">Choose your workspace</div>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-3">
-        <input className="w-full border p-2 rounded" name="email" placeholder="Email" type="email" required />
-        <input className="w-full border p-2 rounded" name="password" placeholder="Password" type="password" required />
+        {error ? (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
 
-        {err && <div className="text-red-600 text-sm">{err}</div>}
+        <form action={continueToWorkspace} className="mt-5 space-y-3">
+          <label className="space-y-1 block">
+            <div className="text-xs font-medium text-slate-600">Workspace</div>
+            <input
+              name="workspace"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+              placeholder="e.g. freshfountain"
+              required
+            />
+            <div className="text-xs text-slate-500">
+              This is the subdomain you registered.
+            </div>
+          </label>
 
-        <button disabled={loading} className="w-full bg-black text-white p-2 rounded">
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+          <button className="w-full rounded-lg bg-slate-900 text-white py-2 text-sm font-medium hover:bg-slate-800">
+            Continue to login
+          </button>
+        </form>
+
+        <div className="mt-4 text-xs text-slate-500">
+          Don&apos;t have a workspace?{" "}
+          <Link className="underline" href="/register">
+            Create one
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

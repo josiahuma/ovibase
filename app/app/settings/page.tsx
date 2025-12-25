@@ -31,6 +31,16 @@ export default async function AdminSettingsPage() {
       desc: "Create reusable SMS messages for reminders and bulk messaging.",
       href: "/app/settings/sms-templates",
     },
+    {
+      title: "SMS Provider",
+      desc: "Configure your SMS provider credentials (TxtLocal/Twilio/etc).",
+      href: "/app/settings/sms-provider",
+    },
+    {
+      title: "Users & Permissions",
+      desc: "Create staff accounts and choose what they can access.",
+      href: "/app/settings/users",
+    },
   ];
 
   return (
@@ -40,7 +50,7 @@ export default async function AdminSettingsPage() {
           Admin Settings
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Configure categories and admin-only workspace settings.
+          Configure categories, messaging and admin-only workspace settings.
         </p>
       </div>
 

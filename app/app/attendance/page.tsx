@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Attendance, EventCategory } from "@prisma/client";
 import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
+import { requirePermission } from "@/src/lib/permissions";
 
 type SearchParams = {
   q?: string;
@@ -14,6 +15,7 @@ export default async function AttendancePage({
   searchParams: Promise<SearchParams>;
 }) {
   const { tenant } = await requireTenant();
+  await requirePermission("attendance");
 
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
