@@ -5,7 +5,7 @@ import { prisma } from "@/src/lib/prisma";
 import { requireTenantWithUserTenant, isAdminRole } from "@/src/lib/guards";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { encryptSecret } from "@/src/lib/crypto"; // <- keep your existing encryptSecret export
+import { encryptSecret } from "@/src/lib/crypto";
 import type { SmsProvider } from "@prisma/client";
 
 function s(v: FormDataEntryValue | null) {
@@ -15,17 +15,14 @@ function s(v: FormDataEntryValue | null) {
 function toBytesBase64OrBuffer(v: unknown): Buffer | null {
   if (!v) return null;
 
-  // already bytes
   if (Buffer.isBuffer(v)) return v;
 
-  // base64 string -> bytes
   if (typeof v === "string") {
     const trimmed = v.trim();
     if (!trimmed) return null;
     return Buffer.from(trimmed, "base64");
   }
 
-  // fallback (should not happen, but keeps TS happy)
   try {
     // @ts-ignore
     return Buffer.from(v);
@@ -51,10 +48,9 @@ export async function saveSmsProviderSettings(formData: FormData) {
   const from = s(formData.get("from")) || null;
   const baseUrl = s(formData.get("baseUrl")) || null;
 
-  // apiKey is optional in UI because you might not want to replace it every time
+  // Optional: only replaces if user typed a new key
   const apiKeyPlain = s(formData.get("apiKey")) || null;
 
-  // Fetch existing (so we can keep current encrypted key if apiKey not provided)
   const existing = await prisma.smsProviderSetting.findUnique({
     where: { tenantId: tenant.id },
     select: {
@@ -71,8 +67,6 @@ export async function saveSmsProviderSettings(formData: FormData) {
   if (apiKeyPlain) {
     const secret = encryptSecret(apiKeyPlain);
 
-    // IMPORTANT:
-    // secret.enc/iv/tag might be string (base64) OR Buffer depending on your crypto implementation
     apiKeyEnc = toBytesBase64OrBuffer(secret.enc);
     apiKeyIv = toBytesBase64OrBuffer(secret.iv);
     apiKeyTag = toBytesBase64OrBuffer(secret.tag);
@@ -104,3 +98,9 @@ export async function saveSmsProviderSettings(formData: FormData) {
   revalidatePath("/app/settings/sms-provider");
   redirect("/app/settings/sms-provider?ok=1");
 }
+
+/**
+ * ✅ Backwards-compatible alias for UI imports
+ * Your form imports `saveSmsProvider`, so we export it too.
+ */
+export const saveSmsProvider = saveSmsProviderSettings;
