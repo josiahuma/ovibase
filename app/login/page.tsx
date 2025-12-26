@@ -94,7 +94,7 @@ export default async function LoginPage({
 
         <div className="mt-4 text-xs text-slate-500">
           Don&apos;t have a workspace?{" "}
-          <Link className="underline" href="/register">
+          <Link className="underline" href="/signup">
             Create one
           </Link>
         </div>

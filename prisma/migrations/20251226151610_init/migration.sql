@@ -44,6 +44,11 @@ CREATE TABLE `UserTenant` (
     `tenantId` VARCHAR(30) NOT NULL,
     `role` ENUM('OWNER', 'ADMIN', 'STAFF', 'VIEWER') NOT NULL DEFAULT 'STAFF',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `canMembers` BOOLEAN NOT NULL DEFAULT false,
+    `canLeaders` BOOLEAN NOT NULL DEFAULT false,
+    `canAttendance` BOOLEAN NOT NULL DEFAULT false,
+    `canFinance` BOOLEAN NOT NULL DEFAULT false,
+    `canSms` BOOLEAN NOT NULL DEFAULT false,
 
     INDEX `UserTenant_tenantId_idx`(`tenantId`),
     INDEX `UserTenant_userId_idx`(`userId`),
@@ -115,6 +120,7 @@ CREATE TABLE `Finance` (
     `tenantId` VARCHAR(30) NOT NULL,
     `amount` DECIMAL(10, 2) NOT NULL,
     `type` VARCHAR(32) NOT NULL,
+    `category` VARCHAR(180) NULL,
     `description` VARCHAR(191) NULL,
     `date` DATETIME(3) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -122,6 +128,7 @@ CREATE TABLE `Finance` (
 
     INDEX `Finance_tenantId_date_idx`(`tenantId`, `date`),
     INDEX `Finance_tenantId_type_idx`(`tenantId`, `type`),
+    INDEX `Finance_tenantId_category_idx`(`tenantId`, `category`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -191,6 +198,43 @@ CREATE TABLE `ChurchUnitCategory` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `SmsProviderSetting` (
+    `tenantId` VARCHAR(30) NOT NULL,
+    `provider` ENUM('TEXTLOCAL', 'TWILIO', 'INFOBIP', 'VONAGE', 'OTHER') NOT NULL DEFAULT 'TEXTLOCAL',
+    `apiKeyEnc` LONGBLOB NULL,
+    `apiKeyIv` LONGBLOB NULL,
+    `apiKeyTag` LONGBLOB NULL,
+    `senderId` VARCHAR(64) NULL,
+    `from` VARCHAR(64) NULL,
+    `baseUrl` VARCHAR(191) NULL,
+    `meta` JSON NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`tenantId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SmsLog` (
+    `id` VARCHAR(30) NOT NULL,
+    `tenantId` VARCHAR(30) NOT NULL,
+    `templateId` VARCHAR(30) NULL,
+    `memberId` VARCHAR(30) NULL,
+    `to` VARCHAR(64) NOT NULL,
+    `message` TEXT NOT NULL,
+    `status` ENUM('SENT', 'FAILED') NOT NULL,
+    `error` TEXT NULL,
+    `provider` ENUM('TEXTLOCAL', 'TWILIO', 'INFOBIP', 'VONAGE', 'OTHER') NULL,
+    `tag` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `SmsLog_tenantId_createdAt_idx`(`tenantId`, `createdAt`),
+    INDEX `SmsLog_tenantId_templateId_idx`(`tenantId`, `templateId`),
+    INDEX `SmsLog_tenantId_memberId_idx`(`tenantId`, `memberId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 -- AddForeignKey
 ALTER TABLE `Domain` ADD CONSTRAINT `Domain_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -226,3 +270,6 @@ ALTER TABLE `EventCategory` ADD CONSTRAINT `EventCategory_tenantId_fkey` FOREIGN
 
 -- AddForeignKey
 ALTER TABLE `ChurchUnitCategory` ADD CONSTRAINT `ChurchUnitCategory_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SmsProviderSetting` ADD CONSTRAINT `SmsProviderSetting_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `Tenant`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
