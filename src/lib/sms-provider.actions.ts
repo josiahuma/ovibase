@@ -1,56 +1,106 @@
+// src/lib/sms-provider.actions.ts
 "use server";
 
 import { prisma } from "@/src/lib/prisma";
-import { requireAdmin } from "@/src/lib/permissions";
+import { requireTenantWithUserTenant, isAdminRole } from "@/src/lib/guards";
 import { revalidatePath } from "next/cache";
-import { encryptSecret } from "@/src/lib/crypto";
+import { redirect } from "next/navigation";
+import { encryptSecret } from "@/src/lib/crypto"; // <- keep your existing encryptSecret export
 import type { SmsProvider } from "@prisma/client";
 
 function s(v: FormDataEntryValue | null) {
-  const out = String(v ?? "").trim();
-  return out.length ? out : null;
+  return String(v ?? "").trim();
 }
 
-export async function saveSmsProvider(formData: FormData) {
-  const { tenant } = await requireAdmin();
+function toBytesBase64OrBuffer(v: unknown): Buffer | null {
+  if (!v) return null;
 
-  const provider = String(formData.get("provider") ?? "TEXTLOCAL") as SmsProvider;
-  const senderId = s(formData.get("senderId"));
-  const from = s(formData.get("from"));
-  const baseUrl = s(formData.get("baseUrl"));
+  // already bytes
+  if (Buffer.isBuffer(v)) return v;
 
-  const apiKeyPlain = s(formData.get("apiKey"));
-  const secret = apiKeyPlain ? encryptSecret(apiKeyPlain) : null;
+  // base64 string -> bytes
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+    if (!trimmed) return null;
+    return Buffer.from(trimmed, "base64");
+  }
 
-  const createData = {
-    tenantId: tenant.id,
-    provider,
-    senderId,
-    from,
-    baseUrl,
-    apiKeyEnc: secret?.enc ? Buffer.from(secret.enc, "base64") : null,
-    apiKeyIv: secret?.iv ? Buffer.from(secret.iv, "base64") : null,
-    apiKeyTag: secret?.tag ? Buffer.from(secret.tag, "base64") : null,
-  };
+  // fallback (should not happen, but keeps TS happy)
+  try {
+    // @ts-ignore
+    return Buffer.from(v);
+  } catch {
+    return null;
+  }
+}
 
-  const updateData: Record<string, any> = {
-    provider,
-    senderId,
-    from,
-    baseUrl,
-  };
+/**
+ * ADMIN: Save SMS Provider settings for this tenant.
+ * Table: SmsProviderSetting (1 row per tenantId)
+ */
+export async function saveSmsProviderSettings(formData: FormData) {
+  const { tenant, ut } = await requireTenantWithUserTenant();
 
-  if (secret) {
-    updateData.apiKeyEnc = Buffer.from(secret.enc, "base64");
-    updateData.apiKeyIv = Buffer.from(secret.iv, "base64");
-    updateData.apiKeyTag = Buffer.from(secret.tag, "base64");
+  const isAdmin = isAdminRole(ut.role);
+  if (!isAdmin) redirect("/app");
+
+  const providerRaw = s(formData.get("provider")).toUpperCase();
+  const provider = (providerRaw || "TEXTLOCAL") as SmsProvider;
+
+  const senderId = s(formData.get("senderId")) || null;
+  const from = s(formData.get("from")) || null;
+  const baseUrl = s(formData.get("baseUrl")) || null;
+
+  // apiKey is optional in UI because you might not want to replace it every time
+  const apiKeyPlain = s(formData.get("apiKey")) || null;
+
+  // Fetch existing (so we can keep current encrypted key if apiKey not provided)
+  const existing = await prisma.smsProviderSetting.findUnique({
+    where: { tenantId: tenant.id },
+    select: {
+      apiKeyEnc: true,
+      apiKeyIv: true,
+      apiKeyTag: true,
+    },
+  });
+
+  let apiKeyEnc = existing?.apiKeyEnc ?? null;
+  let apiKeyIv = existing?.apiKeyIv ?? null;
+  let apiKeyTag = existing?.apiKeyTag ?? null;
+
+  if (apiKeyPlain) {
+    const secret = encryptSecret(apiKeyPlain);
+
+    // IMPORTANT:
+    // secret.enc/iv/tag might be string (base64) OR Buffer depending on your crypto implementation
+    apiKeyEnc = toBytesBase64OrBuffer(secret.enc);
+    apiKeyIv = toBytesBase64OrBuffer(secret.iv);
+    apiKeyTag = toBytesBase64OrBuffer(secret.tag);
   }
 
   await prisma.smsProviderSetting.upsert({
     where: { tenantId: tenant.id },
-    create: createData,
-    update: updateData,
+    update: {
+      provider,
+      senderId,
+      from,
+      baseUrl,
+      apiKeyEnc,
+      apiKeyIv,
+      apiKeyTag,
+    },
+    create: {
+      tenantId: tenant.id,
+      provider,
+      senderId,
+      from,
+      baseUrl,
+      apiKeyEnc,
+      apiKeyIv,
+      apiKeyTag,
+    },
   });
 
   revalidatePath("/app/settings/sms-provider");
+  redirect("/app/settings/sms-provider?ok=1");
 }
