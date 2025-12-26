@@ -1,6 +1,5 @@
-// ovibase/app/app/attendance/[id]/page.tsx
 import Link from "next/link";
-import type { Attendance, EventCategory } from "@prisma/client";
+import { notFound } from "next/navigation";
 import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
 import { deleteAttendance, updateAttendance } from "@/src/lib/attendance.actions";
@@ -8,53 +7,41 @@ import { deleteAttendance, updateAttendance } from "@/src/lib/attendance.actions
 export default async function AttendanceDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const { tenant } = await requireTenant();
+  const { id } = await params;
 
-  const record: Attendance | null = await prisma.attendance.findFirst({
-    where: { id: params.id, tenantId: tenant.id },
+  const record = await prisma.attendance.findFirst({
+    where: { id, tenantId: tenant.id },
   });
 
-  if (!record) {
-    return (
-      <div className="space-y-4">
-        <div className="text-xl font-semibold text-slate-900">Attendance not found</div>
-        <Link className="text-slate-700 underline" href="/app/attendance">
-          Back to attendance
-        </Link>
-      </div>
-    );
-  }
+  // ✅ RETURN fixes TS narrowing
+  if (!record) return notFound();
 
-  const categories: EventCategory[] = await prisma.eventCategory.findMany({
-    where: { tenantId: tenant.id },
-    orderBy: { name: "asc" },
-    take: 500,
-  });
+  const recordId = record.id;
 
   async function onUpdate(formData: FormData) {
     "use server";
-    await updateAttendance(record.id, formData);
+    await updateAttendance(recordId, formData);
   }
 
   async function onDelete() {
     "use server";
-    await deleteAttendance(record.id);
+    await deleteAttendance(recordId);
   }
 
   const toDateValue = (d: Date) => new Date(d).toISOString().slice(0, 10);
 
   return (
     <div className="max-w-2xl space-y-6">
+      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Edit Attendance
+            Attendance Record
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Update this attendance record.
-          </p>
+          <p className="text-sm text-slate-500 mt-1">Edit attendance details.</p>
         </div>
 
         <Link
@@ -65,47 +52,80 @@ export default async function AttendanceDetailPage({
         </Link>
       </div>
 
+      {/* Form */}
       <form
         action={onUpdate}
         className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-5"
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Date"
-            name="date"
-            type="date"
-            required
-            defaultValue={toDateValue(record.date)}
-          />
+          <label className="space-y-1">
+            <div className="text-xs font-medium text-slate-600">Date</div>
+            <input
+              name="date"
+              type="date"
+              defaultValue={toDateValue(record.date)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+            />
+          </label>
 
-          <SelectField
-            label="Event category"
-            name="event"
-            required
-            defaultValue={record.event}
-            placeholder="Select an event category..."
-            options={categories.map((c: EventCategory) => ({
-              value: c.name,
-              label: c.name,
-            }))}
-          />
+          <label className="space-y-1">
+            <div className="text-xs font-medium text-slate-600">Event</div>
+            <input
+              name="event"
+              defaultValue={record.event || ""}
+              placeholder="e.g. Sunday Service"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400"
+            />
+          </label>
 
-          <Field label="Men" name="men" type="number" required defaultValue={String(record.men)} />
-          <Field label="Women" name="women" type="number" required defaultValue={String(record.women)} />
-          <Field
-            label="Children"
-            name="children"
-            type="number"
-            required
-            defaultValue={String(record.children)}
-          />
+          <label className="space-y-1">
+            <div className="text-xs font-medium text-slate-600">Men</div>
+            <input
+              name="men"
+              type="number"
+              defaultValue={String(record.men ?? 0)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <div className="text-xs font-medium text-slate-600">Women</div>
+            <input
+              name="women"
+              type="number"
+              defaultValue={String(record.women ?? 0)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <div className="text-xs font-medium text-slate-600">Children</div>
+            <input
+              name="children"
+              type="number"
+              defaultValue={String(record.children ?? 0)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <div className="text-xs font-medium text-slate-600">Total</div>
+            <input
+              name="total"
+              type="number"
+              defaultValue={String(record.total ?? 0)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
+            />
+          </label>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-600">
-            Current total:{" "}
-            <span className="font-semibold text-slate-900">{record.total}</span>
-          </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <Link
+            href="/app/attendance"
+            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Cancel
+          </Link>
 
           <button className="inline-flex items-center justify-center rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800">
             Save Changes
@@ -113,82 +133,23 @@ export default async function AttendanceDetailPage({
         </div>
       </form>
 
-      <form action={onDelete}>
-        <button className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100">
-          Delete Record
-        </button>
-      </form>
+      {/* Danger zone */}
+      <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="font-medium text-red-800">Danger zone</div>
+            <div className="text-sm text-red-700 mt-1">
+              Deleting this attendance record is permanent.
+            </div>
+          </div>
+
+          <form action={onDelete}>
+            <button className="inline-flex items-center justify-center rounded-lg bg-red-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700">
+              Delete Record
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  type = "text",
-  defaultValue,
-  required,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  defaultValue?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="space-y-1">
-      <div className="text-xs font-medium text-slate-600">
-        {label} {required ? <span className="text-red-500">*</span> : null}
-      </div>
-      <input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        required={required}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
-      />
-    </label>
-  );
-}
-
-function SelectField({
-  label,
-  name,
-  placeholder,
-  options,
-  required,
-  defaultValue,
-}: {
-  label: string;
-  name: string;
-  placeholder?: string;
-  options: Array<{ value: string; label: string }>;
-  required?: boolean;
-  defaultValue?: string;
-}) {
-  return (
-    <label className="space-y-1">
-      <div className="text-xs font-medium text-slate-600">
-        {label} {required ? <span className="text-red-500">*</span> : null}
-      </div>
-      <select
-        name={name}
-        required={required}
-        defaultValue={defaultValue ?? ""}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400"
-      >
-        {!defaultValue ? (
-          <option value="" disabled>
-            {placeholder ?? "Select..."}
-          </option>
-        ) : null}
-
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
