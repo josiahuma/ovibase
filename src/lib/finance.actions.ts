@@ -1,61 +1,126 @@
-// src/lib/finance.actions.ts
 "use server";
 
 import { prisma } from "@/src/lib/prisma";
+import { requireTenant } from "@/src/lib/guards";
 import { requirePermission } from "@/src/lib/permissions";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 function s(v: FormDataEntryValue | null) {
   return String(v ?? "").trim();
 }
 
-function required(v: string, label: string) {
-  if (!v) throw new Error(`${label} is required.`);
-  return v;
+function n(v: FormDataEntryValue | null) {
+  const raw = String(v ?? "").trim();
+  if (!raw) return 0;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : 0;
 }
 
+function dt(v: FormDataEntryValue | null) {
+  const raw = String(v ?? "").trim();
+  if (!raw) return null;
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * CREATE finance record
+ * Expects fields:
+ * - type (income|expense)
+ * - amount
+ * - category (optional string)
+ * - notes/description (optional string)  (we’ll store as "note")
+ * - date (optional)
+ */
 export async function createFinance(formData: FormData) {
-  const { tenant } = await requirePermission("finance");
+  const ctx = await requirePermission("finance");
 
-  const type = s(formData.get("type"));
+  const type = s(formData.get("type")).toLowerCase();
+  const amount = n(formData.get("amount"));
   const category = s(formData.get("category"));
-  const amountRaw = s(formData.get("amount"));
-  const dateRaw = s(formData.get("date"));
-  const description = s(formData.get("description")) || null;
-
-  required(type, "Type");
-  required(category, "Category");
-  required(amountRaw, "Amount");
-  required(dateRaw, "Date");
+  const note = s(formData.get("note")) || s(formData.get("description"));
+  const date = dt(formData.get("date")) ?? new Date();
 
   if (type !== "income" && type !== "expense") {
-    throw new Error("Type must be income or expense.");
+    redirect("/app/finance/new?error=Invalid type");
   }
 
-  const amount = Number(amountRaw);
-  if (Number.isNaN(amount) || amount <= 0) {
-    throw new Error("Amount must be a valid number greater than 0.");
-  }
-
-  const date = new Date(dateRaw);
-  if (Number.isNaN(date.getTime())) {
-    throw new Error("Date is invalid.");
+  if (!amount || amount <= 0) {
+    redirect("/app/finance/new?error=Amount must be greater than 0");
   }
 
   await prisma.finance.create({
     data: {
-      tenantId: tenant.id,
+      tenantId: ctx.tenant.id,
       type,
-      category,
       amount,
+      category: category || null,
+      note: note || null,
       date,
-      description,
-    },
+    } as any, // keeps this file tolerant if your Finance model differs slightly
   });
 
   revalidatePath("/app/finance");
-  revalidatePath("/app");
+  redirect("/app/finance?ok=created");
+}
 
-  redirect("/app/finance");
+/**
+ * UPDATE finance record
+ */
+export async function updateFinance(id: string, formData: FormData) {
+  const { tenant } = await requireTenant();
+  await requirePermission("finance");
+
+  const type = s(formData.get("type")).toLowerCase();
+  const amount = n(formData.get("amount"));
+  const category = s(formData.get("category"));
+  const note = s(formData.get("note")) || s(formData.get("description"));
+  const date = dt(formData.get("date"));
+
+  if (type !== "income" && type !== "expense") {
+    redirect(`/app/finance/${id}?error=Invalid type`);
+  }
+
+  if (!amount || amount <= 0) {
+    redirect(`/app/finance/${id}?error=Amount must be greater than 0`);
+  }
+
+  // ensure it belongs to tenant, then update
+  const existing = await prisma.finance.findFirst({
+    where: { id, tenantId: tenant.id },
+    select: { id: true },
+  });
+
+  if (!existing) redirect("/app/finance?error=Record not found");
+
+  await prisma.finance.update({
+    where: { id },
+    data: {
+      type,
+      amount,
+      category: category || null,
+      note: note || null,
+      ...(date ? { date } : {}),
+    } as any,
+  });
+
+  revalidatePath("/app/finance");
+  revalidatePath(`/app/finance/${id}`);
+  redirect(`/app/finance/${id}?ok=updated`);
+}
+
+/**
+ * DELETE finance record
+ */
+export async function deleteFinance(id: string) {
+  const { tenant } = await requireTenant();
+  await requirePermission("finance");
+
+  await prisma.finance.deleteMany({
+    where: { id, tenantId: tenant.id },
+  });
+
+  revalidatePath("/app/finance");
+  redirect("/app/finance?ok=deleted");
 }
