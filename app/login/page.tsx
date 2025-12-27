@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { getTenantFromRequest, buildTenantUrl } from "@/src/lib/tenant";
 import TenantLoginForm from "./tenant-login-form";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+
 async function continueToWorkspace(formData: FormData) {
   "use server";
 

@@ -12,6 +12,15 @@ function cleanSlug(input: string) {
   return input.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
 }
 
+function firstHeaderValue(v: string | null) {
+  if (!v) return "";
+  return v.split(",")[0].trim();
+}
+
+function stripPort(host: string) {
+  return host.replace(/:\d+$/, "");
+}
+
 function isDevHost(host: string) {
   const h = host.toLowerCase();
   return (
@@ -22,55 +31,39 @@ function isDevHost(host: string) {
   );
 }
 
-/**
- * Returns the public host from proxy headers, safe for production.
- * - In prod: strips :port
- * - In dev: keeps :port
- */
 async function getPublicHost(): Promise<string> {
   const h = await headers();
 
-  const forwardedHost = (h.get("x-forwarded-host") || "").split(",")[0].trim();
-  const host = (forwardedHost || h.get("host") || "localhost:3000")
-    .split(",")[0]
-    .trim();
+  const xfHost = firstHeaderValue(h.get("x-forwarded-host"));
+  const host = firstHeaderValue(h.get("host"));
 
-  if (isDevHost(host)) return host; // keep dev port
+  const raw = xfHost || host || "";
 
-  // prod: strip any port
-  return host.replace(/:\d+$/, "");
+  if (!raw) return "ovibase.com"; // safe fallback
+
+  // keep port only for local dev; strip in prod
+  if (isDevHost(raw)) return raw;
+
+  return stripPort(raw);
 }
 
-/**
- * Returns protocol based on proxy headers
- */
 async function getPublicProto(): Promise<string> {
   const h = await headers();
-  return (h.get("x-forwarded-proto") || "http").split(",")[0].trim();
+  const xfProto = firstHeaderValue(h.get("x-forwarded-proto"));
+  return xfProto || "https";
 }
 
-/**
- * Returns base domain:
- * - Prefer APP_BASE_DOMAIN (best for SaaS)
- * - fallback: derive from current host (last 2 labels)
- */
 async function getBaseDomain(): Promise<string> {
   const envBase = (process.env.APP_BASE_DOMAIN || "").trim().toLowerCase();
   if (envBase) return envBase;
 
-  const host = await getPublicHost();
-  const hostNoPort = host.replace(/:\d+$/, "");
-
-  const parts = hostNoPort.split(".");
-  if (parts.length <= 2) return hostNoPort;
-
-  // naive: last 2 labels (works for ovibase.com)
+  // fallback: derive from current host
+  const host = stripPort(await getPublicHost());
+  const parts = host.split(".");
+  if (parts.length <= 2) return host;
   return parts.slice(-2).join(".");
 }
 
-/**
- * Build a tenant URL always correct in production (no :3000)
- */
 export async function buildTenantUrl(tenantSlug: string, path: string) {
   const slug = cleanSlug(tenantSlug);
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -82,28 +75,38 @@ export async function buildTenantUrl(tenantSlug: string, path: string) {
 }
 
 /**
- * Tenant resolver:
- * - If request host is tenant subdomain, fetch tenant by slug
- * - otherwise return null
+ * Never throw. If anything is odd (headers, db), return null.
  */
 export async function getTenantFromRequest(): Promise<TenantInfo | null> {
-  const host = await getPublicHost();
-  const hostNoPort = host.replace(/:\d+$/, "");
-  const base = await getBaseDomain();
+  try {
+    const host = stripPort(await getPublicHost());
+    const base = await getBaseDomain();
 
-  // If host is exactly base domain, it's root mode
-  if (hostNoPort === base) return null;
+    // root mode
+    if (!host || host === base) return null;
 
-  // If host ends with base domain, treat first label as tenant slug
-  if (!hostNoPort.endsWith(`.${base}`)) return null;
+    // must be a subdomain of base
+    if (!host.endsWith(`.${base}`)) return null;
 
-  const slug = hostNoPort.replace(`.${base}`, "").split(".")[0];
-  if (!slug) return null;
+    const sub = host.slice(0, -(base.length + 1)); // remove ".base"
+    const slug = sub.split(".")[0]; // first label only
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true, slug: true, name: true },
-  });
+    if (!slug) return null;
 
-  return tenant ? { id: tenant.id, slug: tenant.slug, name: tenant.name } : null;
+    const cleaned = cleanSlug(slug);
+    if (!cleaned) return null;
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: cleaned },
+      select: { id: true, slug: true, name: true },
+    });
+
+    if (!tenant) return null;
+
+    return { id: tenant.id, slug: tenant.slug, name: tenant.name };
+  } catch (err) {
+    // IMPORTANT: don't crash the page on transient errors
+    console.error("getTenantFromRequest error:", err);
+    return null;
+  }
 }
