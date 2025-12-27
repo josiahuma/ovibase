@@ -1,20 +1,22 @@
-import { NextResponse } from "next/server";
+// app/api/auth/logout/route.ts
+import { NextResponse, NextRequest } from "next/server";
 import { clearSession } from "@/src/lib/auth";
 
-export async function POST(req: Request) {
-  // clear cookie/session
+/**
+ * Logout must redirect using the PUBLIC origin (x-forwarded headers),
+ * not internal localhost:3000.
+ */
+export async function POST(req: NextRequest) {
   await clearSession();
 
-  // redirect back to login (or "/" if you prefer)
-  const url = new URL("/login", req.url);
-
-  // 303 ensures the browser follows with a GET
+  // Redirect to /login on the SAME host (tenant or root),
+  // based on the actual public request.
+  const url = new URL("/login", req.nextUrl);
   return NextResponse.redirect(url, { status: 303 });
 }
 
-// Optional: allow GET /api/auth/logout too (handy for debugging)
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   await clearSession();
-  const url = new URL("/login", req.url);
+  const url = new URL("/login", req.nextUrl);
   return NextResponse.redirect(url, { status: 303 });
 }

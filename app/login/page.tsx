@@ -1,6 +1,7 @@
-// ovibase/app/login/page.tsx
+// app/login/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getTenantFromRequest, buildTenantUrl } from "@/src/lib/tenant";
 import TenantLoginForm from "./tenant-login-form";
 
@@ -13,6 +14,51 @@ async function continueToWorkspace(formData: FormData) {
   redirect(buildTenantUrl(workspace, "/login"));
 }
 
+/**
+ * Builds the root (workspace chooser) login URL.
+ * - Uses APP_BASE_DOMAIN in production (recommended)
+ * - Falls back to deriving base domain from current host
+ * - Removes ports in production
+ */
+async function getRootLoginUrl(): Promise<string> {
+  const h = await headers();
+
+  const forwardedProto = (h.get("x-forwarded-proto") || "http")
+    .split(",")[0]
+    .trim();
+
+  // ✅ Preferred: control this in production
+  const envBase = (process.env.APP_BASE_DOMAIN || "").trim().toLowerCase();
+  if (envBase) {
+    return `${forwardedProto}://${envBase}/login`;
+  }
+
+  // Fallback: derive from host headers
+  const hostRaw =
+    (h.get("x-forwarded-host") || h.get("host") || "localhost:3000")
+      .split(",")[0]
+      .trim();
+
+  // Remove port unless it's local dev
+  const isDevHost =
+    hostRaw.includes("localhost") ||
+    hostRaw.includes("127.0.0.1") ||
+    hostRaw.endsWith(".local") ||
+    hostRaw.includes(".local:");
+
+  const host = isDevHost ? hostRaw : hostRaw.replace(/:\d+$/, "");
+
+  // If host already has tenant subdomain, reduce to base domain (simple last-2 labels)
+  const cleanHost = host.replace(/:\d+$/, "");
+  const parts = cleanHost.split(".");
+  const base = parts.length <= 2 ? cleanHost : parts.slice(-2).join(".");
+
+  // If dev host includes port, keep it
+  const finalHost = isDevHost ? host : base;
+
+  return `${forwardedProto}://${finalHost}/login`;
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -20,7 +66,7 @@ export default async function LoginPage({
 }) {
   const tenant = await getTenantFromRequest();
 
-  // ✅ Next.js (newer) can treat searchParams as async
+  // ✅ Next.js can treat searchParams as async (depending on version)
   const sp =
     searchParams && typeof (searchParams as any).then === "function"
       ? await (searchParams as Promise<{ error?: string }>)
@@ -30,6 +76,8 @@ export default async function LoginPage({
 
   // ✅ TENANT MODE: show email/password
   if (tenant) {
+    const rootLoginUrl = await getRootLoginUrl();
+
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -51,7 +99,7 @@ export default async function LoginPage({
 
           <div className="mt-4 text-xs text-slate-500">
             Need a different workspace?{" "}
-            <Link className="underline" href={`http://ovibase.local:3000/login`}>
+            <Link className="underline" href={rootLoginUrl}>
               Go to workspace chooser
             </Link>
           </div>
