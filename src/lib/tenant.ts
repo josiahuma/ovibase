@@ -1,67 +1,109 @@
-// ovibase/src/lib/tenant.ts
+// src/lib/tenant.ts
 import { headers } from "next/headers";
 import { prisma } from "@/src/lib/prisma";
 
-async function getHostFromHeaders(): Promise<string> {
-  const h = await headers();
-  return (h.get("x-forwarded-host") || h.get("host") || "").toLowerCase();
+export type TenantInfo = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+function cleanSlug(input: string) {
+  return input.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
 }
 
-function stripPort(host: string) {
+function isDevHost(host: string) {
+  const h = host.toLowerCase();
+  return (
+    h.includes("localhost") ||
+    h.includes("127.0.0.1") ||
+    h.endsWith(".local") ||
+    h.includes(".local:")
+  );
+}
+
+/**
+ * Returns the public host from proxy headers, safe for production.
+ * - In prod: strips :port
+ * - In dev: keeps :port
+ */
+async function getPublicHost(): Promise<string> {
+  const h = await headers();
+
+  const forwardedHost = (h.get("x-forwarded-host") || "").split(",")[0].trim();
+  const host = (forwardedHost || h.get("host") || "localhost:3000")
+    .split(",")[0]
+    .trim();
+
+  if (isDevHost(host)) return host; // keep dev port
+
+  // prod: strip any port
   return host.replace(/:\d+$/, "");
 }
 
-export function getBaseDomain() {
-  return (process.env.APP_BASE_DOMAIN || "").trim().toLowerCase();
+/**
+ * Returns protocol based on proxy headers
+ */
+async function getPublicProto(): Promise<string> {
+  const h = await headers();
+  return (h.get("x-forwarded-proto") || "http").split(",")[0].trim();
 }
 
-export function getAppPort() {
-  return (process.env.APP_PORT || "3000").trim();
+/**
+ * Returns base domain:
+ * - Prefer APP_BASE_DOMAIN (best for SaaS)
+ * - fallback: derive from current host (last 2 labels)
+ */
+async function getBaseDomain(): Promise<string> {
+  const envBase = (process.env.APP_BASE_DOMAIN || "").trim().toLowerCase();
+  if (envBase) return envBase;
+
+  const host = await getPublicHost();
+  const hostNoPort = host.replace(/:\d+$/, "");
+
+  const parts = hostNoPort.split(".");
+  if (parts.length <= 2) return hostNoPort;
+
+  // naive: last 2 labels (works for ovibase.com)
+  return parts.slice(-2).join(".");
 }
 
-export function getSubdomainFromHost(hostWithPort: string): string | null {
-  const baseDomain = getBaseDomain();
-  if (!baseDomain) return null;
+/**
+ * Build a tenant URL always correct in production (no :3000)
+ */
+export async function buildTenantUrl(tenantSlug: string, path: string) {
+  const slug = cleanSlug(tenantSlug);
+  const p = path.startsWith("/") ? path : `/${path}`;
 
-  const host = stripPort(hostWithPort);
+  const proto = await getPublicProto();
+  const base = await getBaseDomain();
 
-  // Root host: ovibase.local
-  if (host === baseDomain) return null;
-
-  // Must end with ".ovibase.local"
-  if (!host.endsWith("." + baseDomain)) return null;
-
-  // subdomain = whatever is before ".ovibase.local"
-  const sub = host.slice(0, host.length - (baseDomain.length + 1)); // remove ".baseDomain"
-  if (!sub) return null;
-
-  // prevent multi-level accidental subdomain like a.b.ovibase.local (optional)
-  // If you want to allow nested subdomains, remove this.
-  if (sub.includes(".")) return sub.split(".")[0];
-
-  return sub;
+  return `${proto}://${slug}.${base}${p}`;
 }
 
-export async function getTenantFromRequest() {
-  const host = await getHostFromHeaders();
-  if (!host) return null;
+/**
+ * Tenant resolver:
+ * - If request host is tenant subdomain, fetch tenant by slug
+ * - otherwise return null
+ */
+export async function getTenantFromRequest(): Promise<TenantInfo | null> {
+  const host = await getPublicHost();
+  const hostNoPort = host.replace(/:\d+$/, "");
+  const base = await getBaseDomain();
 
-  const sub = getSubdomainFromHost(host);
-  if (!sub) return null;
+  // If host is exactly base domain, it's root mode
+  if (hostNoPort === base) return null;
+
+  // If host ends with base domain, treat first label as tenant slug
+  if (!hostNoPort.endsWith(`.${base}`)) return null;
+
+  const slug = hostNoPort.replace(`.${base}`, "").split(".")[0];
+  if (!slug) return null;
 
   const tenant = await prisma.tenant.findUnique({
-    where: { slug: sub },
-    select: { id: true, name: true, slug: true },
+    where: { slug },
+    select: { id: true, slug: true, name: true },
   });
 
-  return tenant;
-}
-
-export function buildTenantUrl(workspaceSlug: string, path: string = "/login") {
-  const baseDomain = getBaseDomain();
-  const port = getAppPort();
-  const ws = workspaceSlug.trim().toLowerCase();
-
-  // http://freshfountain.ovibase.local:3000/login
-  return `http://${ws}.${baseDomain}:${port}${path}`;
+  return tenant ? { id: tenant.id, slug: tenant.slug, name: tenant.name } : null;
 }
