@@ -33,15 +33,15 @@ export default function DashboardCelebrations({
 
   const list = tab === "birthdays" ? birthdayMembers : anniversaryMembers;
 
-  const initialSelected = useMemo(() => new Set(list.map((m) => m.id)), [list]);
-  const [selected, setSelected] = useState<Set<string>>(initialSelected);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
 
   // When tab changes, reset selected to all in view
   function switchTab(next: "birthdays" | "anniversaries") {
     setTab(next);
-    const nextList = next === "birthdays" ? birthdayMembers : anniversaryMembers;
-    setSelected(new Set(nextList.map((m) => m.id)));
+    setSelected(new Set()); // none selected by default
   }
+
 
   const selectedCount = selected.size;
 
@@ -102,11 +102,14 @@ export default function DashboardCelebrations({
               type="button"
               className="text-sm text-slate-600 hover:text-slate-900"
               onClick={() => {
-                const ids = list.map((m) => m.id);
-                setSelected(new Set(ids));
+                if (selected.size === list.length) {
+                  setSelected(new Set()); // clear all
+                } else {
+                  setSelected(new Set(list.map((m) => m.id))); // select all
+                }
               }}
             >
-              Select all
+              {selected.size === list.length ? "Clear" : "Select all"}
             </button>
           </div>
 
