@@ -10,14 +10,14 @@ export async function GET(req: Request) {
   // Pull years from both tables, merge distinct
   const attendanceYears = await prisma.$queryRaw<Array<{ y: number }>>`
     SELECT DISTINCT YEAR(\`date\`) as y
-    FROM attendance
+    FROM Attendance
     WHERE tenantId = ${tenantId}
     ORDER BY y DESC
   `;
 
   const financeYears = await prisma.$queryRaw<Array<{ y: number }>>`
     SELECT DISTINCT YEAR(\`date\`) as y
-    FROM finance
+    FROM Finance
     WHERE tenantId = ${tenantId}
     ORDER BY y DESC
   `;
