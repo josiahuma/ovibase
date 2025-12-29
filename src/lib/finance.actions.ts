@@ -56,7 +56,7 @@ export async function createFinance(formData: FormData) {
       type,
       amount,
       category: category || null,
-      note: note || null,
+      description: note || null,
       date,
     } as any, // keeps this file tolerant if your Finance model differs slightly
   });
@@ -100,7 +100,7 @@ export async function updateFinance(id: string, formData: FormData) {
       type,
       amount,
       category: category || null,
-      note: note || null,
+      description: note || null,
       ...(date ? { date } : {}),
     } as any,
   });
