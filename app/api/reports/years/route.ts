@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
+import { getTenantFromRequest } from "@/src/lib/tenant";
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get("tenantId");
+  const tenant = await getTenantFromRequest();
+  const tenantId = tenant?.id;
 
-  if (!tenantId) return NextResponse.json({ error: "tenantId is required" }, { status: 400 });
+  if (!tenantId) {
+    return NextResponse.json({ error: "No tenant in session" }, { status: 401 });
+  }
 
-  // Pull years from both tables, merge distinct
   const attendanceYears = await prisma.$queryRaw<Array<{ y: number }>>`
     SELECT DISTINCT YEAR(\`date\`) as y
     FROM Attendance
@@ -23,8 +25,13 @@ export async function GET(req: Request) {
   `;
 
   const years = Array.from(
-    new Set([...attendanceYears.map(x => Number(x.y)), ...financeYears.map(x => Number(x.y))])
-  ).sort((a, b) => b - a);
+    new Set([
+      ...attendanceYears.map(x => Number(x.y)),
+      ...financeYears.map(x => Number(x.y)),
+    ])
+  )
+    .filter(Boolean)
+    .sort((a, b) => b - a);
 
   return NextResponse.json({ years });
 }

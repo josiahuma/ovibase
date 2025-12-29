@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
+import { getTenantFromRequest } from "@/src/lib/tenant";
 
 type Row = { month: number; income: any; expense: any };
 
 export async function GET(req: Request) {
+  const tenant = await getTenantFromRequest();
+  const tenantId = tenant?.id;
+
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get("tenantId");
   const year = Number(searchParams.get("year"));
 
-  if (!tenantId) return NextResponse.json({ error: "tenantId is required" }, { status: 400 });
+  if (!tenantId) return NextResponse.json({ error: "No tenant in session" }, { status: 401 });
   if (!year || Number.isNaN(year)) return NextResponse.json({ error: "year is required" }, { status: 400 });
 
   const rows = await prisma.$queryRaw<Row[]>`

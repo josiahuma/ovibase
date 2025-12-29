@@ -1,68 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
+import { useEffect, useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-// month labels
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 type AttendancePoint = { month: number; total: number };
 type FinancePoint = { month: number; income: number; expense: number };
 
 export default function ReportsPage() {
-  // ✅ Replace this with however you already store tenantId (cookie, session, etc.)
-  const tenantId = useMemo(() => {
-    // Example: read from localStorage or your existing tenant context
-    return (typeof window !== "undefined" && localStorage.getItem("tenantId")) || "";
-  }, []);
-
   const [years, setYears] = useState<number[]>([]);
   const [year, setYear] = useState<number>(new Date().getFullYear());
-
   const [attendance, setAttendance] = useState<AttendancePoint[]>([]);
   const [finance, setFinance] = useState<FinancePoint[]>([]);
   const [tab, setTab] = useState<"attendance" | "finance">("attendance");
 
   useEffect(() => {
-    if (!tenantId) return;
-
     (async () => {
-      const res = await fetch(`/api/reports/years?tenantId=${encodeURIComponent(tenantId)}`);
+      const res = await fetch(`/api/reports/years`, { cache: "no-store" });
       const json = await res.json();
       const ys = (json.years ?? []) as number[];
       setYears(ys);
-
-      // pick latest available year if any
       if (ys.length > 0) setYear(ys[0]);
     })();
-  }, [tenantId]);
+  }, []);
 
   useEffect(() => {
-    if (!tenantId || !year) return;
+    if (!year) return;
 
     (async () => {
-      const aRes = await fetch(`/api/reports/attendance?tenantId=${encodeURIComponent(tenantId)}&year=${year}`);
+      const aRes = await fetch(`/api/reports/attendance?year=${year}`, { cache: "no-store" });
       const aJson = await aRes.json();
       setAttendance((aJson.data ?? []) as AttendancePoint[]);
 
-      const fRes = await fetch(`/api/reports/finance?tenantId=${encodeURIComponent(tenantId)}&year=${year}`);
+      const fRes = await fetch(`/api/reports/finance?year=${year}`, { cache: "no-store" });
       const fJson = await fRes.json();
       setFinance((fJson.data ?? []) as FinancePoint[]);
     })();
-  }, [tenantId, year]);
+  }, [year]);
 
-  const attendanceChartData = attendance.map(p => ({
-    month: MONTHS[p.month - 1] ?? String(p.month),
-    total: p.total,
-  }));
-
-  const financeChartData = finance.map(p => ({
-    month: MONTHS[p.month - 1] ?? String(p.month),
-    income: p.income,
-    expense: p.expense,
-  }));
+  const attendanceChartData = attendance.map(p => ({ month: MONTHS[p.month - 1] ?? String(p.month), total: p.total }));
+  const financeChartData = finance.map(p => ({ month: MONTHS[p.month - 1] ?? String(p.month), income: p.income, expense: p.expense }));
 
   return (
     <div className="p-6 space-y-4">
