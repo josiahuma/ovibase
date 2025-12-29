@@ -1,5 +1,5 @@
 "use client";
-
+//ovibase/src/components/charts/AttendanceBar.tsx
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function AttendanceBar({ data }: { data: { month: string; total: number }[] }) {

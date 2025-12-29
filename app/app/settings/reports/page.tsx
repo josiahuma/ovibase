@@ -1,14 +1,21 @@
 "use client";
 
+// ovibase/app/app/settings/reports/page.tsx
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 type AttendancePoint = { month: number; total: number };
 type FinancePoint = { month: number; income: number; expense: number };
 
+type AttendanceChartRow = { month: string; total: number; monthNumber: number };
+type FinanceChartRow = { month: string; income: number; expense: number };
+
 export default function ReportsPage() {
+  const router = useRouter();
+
   const [years, setYears] = useState<number[]>([]);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [attendance, setAttendance] = useState<AttendancePoint[]>([]);
@@ -39,8 +46,27 @@ export default function ReportsPage() {
     })();
   }, [year]);
 
-  const attendanceChartData = attendance.map(p => ({ month: MONTHS[p.month - 1] ?? String(p.month), total: p.total }));
-  const financeChartData = finance.map(p => ({ month: MONTHS[p.month - 1] ?? String(p.month), income: p.income, expense: p.expense }));
+  const attendanceChartData: AttendanceChartRow[] = attendance.map((p) => ({
+    month: MONTHS[p.month - 1] ?? String(p.month),
+    total: p.total,
+    monthNumber: p.month, // important for clicking a bar
+  }));
+
+  const financeChartData: FinanceChartRow[] = finance.map((p) => ({
+    month: MONTHS[p.month - 1] ?? String(p.month),
+    income: p.income,
+    expense: p.expense,
+  }));
+
+  const handleAttendanceBarClick = (bar: any) => {
+    // recharts passes an object with `payload`
+    const payload = bar?.payload as AttendanceChartRow | undefined;
+    const monthNumber = Number(payload?.monthNumber);
+
+    if (!year || !monthNumber || Number.isNaN(monthNumber)) return;
+
+    router.push(`/app/settings/reports/attendance/${year}/${monthNumber}`);
+  };
 
   return (
     <div className="p-6 space-y-4">
@@ -53,14 +79,18 @@ export default function ReportsPage() {
         <div className="flex gap-2 items-center">
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
             <button
-              className={`px-3 py-1.5 text-sm rounded-md ${tab === "attendance" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+              className={`px-3 py-1.5 text-sm rounded-md ${
+                tab === "attendance" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"
+              }`}
               onClick={() => setTab("attendance")}
               type="button"
             >
               Attendance
             </button>
             <button
-              className={`px-3 py-1.5 text-sm rounded-md ${tab === "finance" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"}`}
+              className={`px-3 py-1.5 text-sm rounded-md ${
+                tab === "finance" ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-50"
+              }`}
               onClick={() => setTab("finance")}
               type="button"
             >
@@ -77,7 +107,11 @@ export default function ReportsPage() {
             {years.length === 0 ? (
               <option>No data yet</option>
             ) : (
-              years.map((y) => <option key={y} value={y}>{y}</option>)
+              years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))
             )}
           </select>
         </div>
@@ -86,7 +120,11 @@ export default function ReportsPage() {
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
         {tab === "attendance" ? (
           <>
-            <div className="text-sm font-medium text-slate-800 mb-3">Attendance (Monthly Totals)</div>
+            <div className="text-sm font-medium text-slate-800 mb-3">
+              Attendance (Monthly Totals)
+              <span className="ml-2 text-xs text-slate-500">(click a month to drill down)</span>
+            </div>
+
             <div className="h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={attendanceChartData}>
@@ -94,7 +132,11 @@ export default function ReportsPage() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="total" />
+                  <Bar
+                    dataKey="total"
+                    style={{ cursor: "pointer" }}
+                    onClick={handleAttendanceBarClick}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
