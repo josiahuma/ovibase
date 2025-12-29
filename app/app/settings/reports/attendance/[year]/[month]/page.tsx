@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import ExportPdfButton from "@/src/components/ExportPdfButton";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -19,10 +20,10 @@ export default function AttendanceMonthByCategoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const title = useMemo(() => {
-    const m = MONTHS[month - 1] ?? `Month ${month}`;
-    return `Attendance by Category — ${m} ${year}`;
-  }, [year, month]);
+  const exportRef = useRef<HTMLDivElement | null>(null);
+
+  const monthLabel = MONTHS[month - 1] ?? `Month ${month}`;
+  const title = useMemo(() => `Attendance by Category — ${monthLabel} ${year}`, [monthLabel, year]);
 
   useEffect(() => {
     if (!year || !month) return;
@@ -46,7 +47,6 @@ export default function AttendanceMonthByCategoryPage() {
         }
 
         if (!res.ok) {
-          // SHOW BOTH error + message if present
           const msgParts = [
             json?.error ? String(json.error) : `Request failed (${res.status})`,
             json?.message ? String(json.message) : null,
@@ -76,40 +76,50 @@ export default function AttendanceMonthByCategoryPage() {
           <p className="text-sm text-slate-500">Breakdown of the selected month by event category.</p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => router.push("/app/settings/reports")}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-        >
-          ← Back to Reports
-        </button>
+        <div className="flex gap-2 items-center">
+          <ExportPdfButton
+            getElement={() => exportRef.current}
+            filename={`attendance-by-category-${year}-${String(month).padStart(2, "0")}.pdf`}
+            title={title}
+          />
+          <button
+            type="button"
+            onClick={() => router.push("/app/settings/reports")}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            ← Back to Reports
+          </button>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
-        <div className="text-sm font-medium text-slate-800 mb-3">Totals by Event Category</div>
+      {/* Everything inside this div will be exported */}
+      <div ref={exportRef} className="space-y-4">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
+          <div className="text-sm font-medium text-slate-800 mb-3">Totals by Event Category</div>
 
-        {loading ? (
-          <div className="text-sm text-slate-500 py-10">Loading…</div>
-        ) : error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <div className="font-semibold mb-1">Could not load report</div>
-            <pre className="whitespace-pre-wrap text-xs leading-relaxed">{error}</pre>
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="text-sm text-slate-500 py-10">No data for this month.</div>
-        ) : (
-          <div className="h-[420px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows}>
-                <XAxis dataKey="category" interval={0} angle={-15} textAnchor="end" height={70} />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="total" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+          {loading ? (
+            <div className="text-sm text-slate-500 py-10">Loading…</div>
+          ) : error ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <div className="font-semibold mb-1">Could not load report</div>
+              <pre className="whitespace-pre-wrap text-xs leading-relaxed">{error}</pre>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="text-sm text-slate-500 py-10">No data for this month.</div>
+          ) : (
+            <div className="h-[420px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={rows}>
+                  <XAxis dataKey="category" interval={0} angle={-15} textAnchor="end" height={70} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="total" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

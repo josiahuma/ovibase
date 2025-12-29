@@ -1,9 +1,10 @@
 "use client";
 
 // ovibase/app/app/settings/reports/page.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import ExportPdfButton from "@/src/components/ExportPdfButton";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -15,6 +16,7 @@ type FinanceChartRow = { month: string; income: number; expense: number; monthNu
 
 export default function ReportsPage() {
   const router = useRouter();
+  const exportRef = useRef<HTMLDivElement | null>(null);
 
   const [years, setYears] = useState<number[]>([]);
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -73,6 +75,16 @@ export default function ReportsPage() {
     router.push(`/app/settings/reports/finance/${year}/${monthNumber}`);
   };
 
+  const exportTitle =
+    tab === "attendance"
+      ? `Reports — Attendance (Monthly Totals) — ${year}`
+      : `Reports — Finance (Income vs Expense) — ${year}`;
+
+  const exportFilename =
+    tab === "attendance"
+      ? `reports-attendance-${year}.pdf`
+      : `reports-finance-${year}.pdf`;
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-start justify-between gap-4 flex-col sm:flex-row">
@@ -82,6 +94,12 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex gap-2 items-center">
+          <ExportPdfButton
+            getElement={() => exportRef.current}
+            filename={exportFilename}
+            title={exportTitle}
+          />
+
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
             <button
               className={`px-3 py-1.5 text-sm rounded-md ${
@@ -122,7 +140,8 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
+      {/* Everything inside here is what will export */}
+      <div ref={exportRef} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
         {tab === "attendance" ? (
           <>
             <div className="text-sm font-medium text-slate-800 mb-3">
@@ -137,7 +156,11 @@ export default function ReportsPage() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="total" style={{ cursor: "pointer" }} onClick={handleAttendanceBarClick} />
+                  <Bar
+                    dataKey="total"
+                    style={{ cursor: "pointer" }}
+                    onClick={handleAttendanceBarClick}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -156,9 +179,17 @@ export default function ReportsPage() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="income" style={{ cursor: "pointer" }} onClick={handleFinanceBarClick} />
-                  {/* Expense bar red */}
-                  <Bar dataKey="expense" fill="#ef4444" style={{ cursor: "pointer" }} onClick={handleFinanceBarClick} />
+                  <Bar
+                    dataKey="income"
+                    style={{ cursor: "pointer" }}
+                    onClick={handleFinanceBarClick}
+                  />
+                  <Bar
+                    dataKey="expense"
+                    fill="#ef4444"
+                    style={{ cursor: "pointer" }}
+                    onClick={handleFinanceBarClick}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
