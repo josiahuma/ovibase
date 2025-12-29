@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     SELECT 
       MONTH(\`date\`) as month,
       SUM(\`total\`) as total
-    FROM attendance
+    FROM Attendance
     WHERE tenantId = ${tenantId}
       AND YEAR(\`date\`) = ${year}
     GROUP BY MONTH(\`date\`)

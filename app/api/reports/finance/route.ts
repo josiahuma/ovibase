@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       MONTH(\`date\`) as month,
       SUM(CASE WHEN \`type\` = 'income' THEN \`amount\` ELSE 0 END) as income,
       SUM(CASE WHEN \`type\` = 'expense' THEN \`amount\` ELSE 0 END) as expense
-    FROM finance
+    FROM Finance
     WHERE tenantId = ${tenantId}
       AND YEAR(\`date\`) = ${year}
     GROUP BY MONTH(\`date\`)
