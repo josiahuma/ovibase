@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/prisma";
+import { isDbDownError } from "@/src/lib/db-safe";
 import type { UserRole } from "@prisma/client";
 
 export type GuardSession = {
@@ -54,38 +55,53 @@ export async function requireSession(): Promise<GuardSession> {
 export async function requireTenant(): Promise<GuardResult> {
   const session = await requireSession();
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: session.tenantId },
-    select: { id: true, name: true, slug: true },
-  });
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.tenantId },
+      select: { id: true, name: true, slug: true },
+    });
 
-  if (!tenant) redirect("/login");
+    if (!tenant) redirect("/login");
 
-  const role = session.role;
+    return { session, tenant, role: session.role };
+  } catch (err) {
+    // ✅ DB temporarily unavailable: show friendly page instead of digest screen
+    if (isDbDownError(err)) {
+      redirect("/db-down");
+    }
 
-  return { session, tenant, role };
+    // unknown error: still don't white-screen
+    console.error("requireTenant error:", err);
+    redirect("/login");
+  }
 }
 
 export async function requireTenantWithUserTenant(): Promise<GuardResultWithUserTenant> {
   const ctx = await requireTenant();
 
-  const ut = await prisma.userTenant.findUnique({
-    where: {
-      userId_tenantId: { userId: ctx.session.userId, tenantId: ctx.tenant.id },
-    },
-    select: {
-      role: true,
-      canMembers: true,
-      canLeaders: true,
-      canAttendance: true,
-      canFinance: true,
-      canSms: true,
-    },
-  });
+  try {
+    const ut = await prisma.userTenant.findUnique({
+      where: {
+        userId_tenantId: { userId: ctx.session.userId, tenantId: ctx.tenant.id },
+      },
+      select: {
+        role: true,
+        canMembers: true,
+        canLeaders: true,
+        canAttendance: true,
+        canFinance: true,
+        canSms: true,
+      },
+    });
 
-  if (!ut) redirect("/login");
+    if (!ut) redirect("/login");
 
-  return { ...ctx, ut };
+    return { ...ctx, ut };
+  } catch (err) {
+    if (isDbDownError(err)) redirect("/db-down");
+    console.error("requireTenantWithUserTenant error:", err);
+    redirect("/login");
+  }
 }
 
 export async function requireAdmin(): Promise<GuardResultWithUserTenant> {
