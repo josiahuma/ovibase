@@ -104,7 +104,7 @@ export async function updateMember(memberId: string, formData: FormData) {
 
   revalidatePath("/app/members");
   revalidatePath(`/app/members/${memberId}`);
-  redirect(`/app/members/${memberId}`);
+  redirect(`/app/members/${memberId}?ok=updated`);
 }
 
 export async function deleteMember(memberId: string) {

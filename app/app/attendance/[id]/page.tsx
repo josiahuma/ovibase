@@ -6,11 +6,15 @@ import { deleteAttendance, updateAttendance } from "@/src/lib/attendance.actions
 
 export default async function AttendanceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ ok?: string; error?: string }>;
 }) {
   const { tenant } = await requireTenant();
   const { id } = await params;
+  const sp = (await searchParams) ?? {};
+  const ok = sp.ok;
 
   const record = await prisma.attendance.findFirst({
     where: { id, tenantId: tenant.id },
@@ -51,6 +55,15 @@ export default async function AttendanceDetailPage({
           Back
         </Link>
       </div>
+
+      {ok === "updated" ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900">
+              <div className="text-sm font-medium">Saved!</div>
+              <div className="text-xs text-emerald-800 mt-0.5">
+                Member details were updated successfully.
+              </div>
+            </div>
+          ) : null}
 
       {/* Form */}
       <form

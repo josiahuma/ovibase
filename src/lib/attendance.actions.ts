@@ -81,7 +81,7 @@ export async function updateAttendance(attendanceId: string, formData: FormData)
     },
   });
 
-  redirect(`/app/attendance/${attendanceId}`);
+  redirect(`/app/attendance/${attendanceId}?ok=updated`);
 }
 
 export async function deleteAttendance(attendanceId: string) {

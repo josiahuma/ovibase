@@ -66,7 +66,8 @@ export async function updateLeader(leaderId: string, formData: FormData) {
     },
   });
 
-  redirect(`/app/leaders/${leaderId}`);
+  redirect(`/app/leaders/${leaderId}?ok=updated`);
+
 }
 
 export async function deleteLeader(leaderId: string) {
