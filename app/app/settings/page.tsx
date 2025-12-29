@@ -41,6 +41,11 @@ export default async function AdminSettingsPage() {
       desc: "Create staff accounts and choose what they can access.",
       href: "/app/settings/users",
     },
+    {
+      title: "Reports",
+      desc: "View and manage reports for attendance and finance.",
+      href: "/app/settings/reports",
+    }
   ];
 
   return (
