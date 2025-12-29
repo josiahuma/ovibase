@@ -16,7 +16,7 @@ export default function FinanceBar({
           <Tooltip />
           <Legend />
           <Bar dataKey="income" />
-          <Bar dataKey="expense" />
+          <Bar dataKey="expense" fill="#ef4444" />
         </BarChart>
       </ResponsiveContainer>
     </div>

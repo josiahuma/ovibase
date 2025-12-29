@@ -5,13 +5,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 type AttendancePoint = { month: number; total: number };
 type FinancePoint = { month: number; income: number; expense: number };
 
 type AttendanceChartRow = { month: string; total: number; monthNumber: number };
-type FinanceChartRow = { month: string; income: number; expense: number };
+type FinanceChartRow = { month: string; income: number; expense: number; monthNumber: number };
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -49,23 +49,28 @@ export default function ReportsPage() {
   const attendanceChartData: AttendanceChartRow[] = attendance.map((p) => ({
     month: MONTHS[p.month - 1] ?? String(p.month),
     total: p.total,
-    monthNumber: p.month, // important for clicking a bar
+    monthNumber: p.month,
   }));
 
   const financeChartData: FinanceChartRow[] = finance.map((p) => ({
     month: MONTHS[p.month - 1] ?? String(p.month),
     income: p.income,
     expense: p.expense,
+    monthNumber: p.month,
   }));
 
   const handleAttendanceBarClick = (bar: any) => {
-    // recharts passes an object with `payload`
     const payload = bar?.payload as AttendanceChartRow | undefined;
     const monthNumber = Number(payload?.monthNumber);
-
     if (!year || !monthNumber || Number.isNaN(monthNumber)) return;
-
     router.push(`/app/settings/reports/attendance/${year}/${monthNumber}`);
+  };
+
+  const handleFinanceBarClick = (bar: any) => {
+    const payload = bar?.payload as FinanceChartRow | undefined;
+    const monthNumber = Number(payload?.monthNumber);
+    if (!year || !monthNumber || Number.isNaN(monthNumber)) return;
+    router.push(`/app/settings/reports/finance/${year}/${monthNumber}`);
   };
 
   return (
@@ -132,18 +137,18 @@ export default function ReportsPage() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar
-                    dataKey="total"
-                    style={{ cursor: "pointer" }}
-                    onClick={handleAttendanceBarClick}
-                  />
+                  <Bar dataKey="total" style={{ cursor: "pointer" }} onClick={handleAttendanceBarClick} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </>
         ) : (
           <>
-            <div className="text-sm font-medium text-slate-800 mb-3">Finance (Income vs Expense)</div>
+            <div className="text-sm font-medium text-slate-800 mb-3">
+              Finance (Income vs Expense)
+              <span className="ml-2 text-xs text-slate-500">(click a month to drill down)</span>
+            </div>
+
             <div className="h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={financeChartData}>
@@ -151,8 +156,9 @@ export default function ReportsPage() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="income" />
-                  <Bar dataKey="expense" />
+                  <Bar dataKey="income" style={{ cursor: "pointer" }} onClick={handleFinanceBarClick} />
+                  {/* Expense bar red */}
+                  <Bar dataKey="expense" fill="#ef4444" style={{ cursor: "pointer" }} onClick={handleFinanceBarClick} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
