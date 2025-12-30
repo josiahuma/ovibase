@@ -78,6 +78,22 @@ export async function buildTenantUrl(tenantSlug: string, path: string) {
  * Never throw. If anything is odd (headers, db), return null.
  */
 export async function getTenantFromRequest(): Promise<TenantInfo | null> {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function retry<T>(fn: () => Promise<T>, tries = 3) {
+    let lastErr: any;
+    for (let i = 0; i < tries; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastErr = err;
+        // small backoff: 150ms, 300ms, 450ms
+        await sleep(150 * (i + 1));
+      }
+    }
+    throw lastErr;
+  }
+
   try {
     const host = stripPort(await getPublicHost());
     const base = await getBaseDomain();
@@ -90,23 +106,25 @@ export async function getTenantFromRequest(): Promise<TenantInfo | null> {
 
     const sub = host.slice(0, -(base.length + 1)); // remove ".base"
     const slug = sub.split(".")[0]; // first label only
-
     if (!slug) return null;
 
     const cleaned = cleanSlug(slug);
     if (!cleaned) return null;
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug: cleaned },
-      select: { id: true, slug: true, name: true },
-    });
+    const tenant = await retry(
+      () =>
+        prisma.tenant.findUnique({
+          where: { slug: cleaned },
+          select: { id: true, slug: true, name: true },
+        }),
+      3
+    );
 
     if (!tenant) return null;
-
     return { id: tenant.id, slug: tenant.slug, name: tenant.name };
   } catch (err) {
-    // IMPORTANT: don't crash the page on transient errors
     console.error("getTenantFromRequest error:", err);
     return null;
   }
 }
+
