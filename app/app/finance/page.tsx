@@ -1,13 +1,16 @@
+//ovibase/app/app/finance/page.tsx
 import Link from "next/link";
 import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
 import { requirePermission } from "@/src/lib/permissions";
+import { requirePro } from "@/src/lib/pro-guard";
 
 type SearchParams = { q?: string; type?: string };
 
 export default async function FinancePage(props: { searchParams: Promise<SearchParams> | SearchParams }) {
   const { tenant } = await requireTenant();
   await requirePermission("finance");
+  await requirePro(tenant.id);
 
   // ✅ Next 16.1 may provide searchParams as a Promise — unwrap safely
   const sp = (await (props.searchParams as any)) as SearchParams;
@@ -30,6 +33,14 @@ export default async function FinancePage(props: { searchParams: Promise<SearchP
       where,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 300,
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        description: true,
+        date: true,
+        donationId: true,
+      },
     }),
     prisma.finance.aggregate({
       where: { tenantId: tenant.id, type: "income" },
@@ -179,12 +190,18 @@ export default async function FinancePage(props: { searchParams: Promise<SearchP
                     </td>
 
                     <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/app/finance/${r.id}`}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        View / Edit
-                      </Link>
+                      {r.donationId ? (
+                        <span className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
+                          Locked (Stripe)
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/app/finance/${r.id}`}
+                          className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          View / Edit
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))

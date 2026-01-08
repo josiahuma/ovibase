@@ -1,10 +1,11 @@
 "use server";
-
+// ovibase/src/lib/finance.actions.ts
 import { prisma } from "@/src/lib/prisma";
 import { requireTenant } from "@/src/lib/guards";
 import { requirePermission } from "@/src/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requirePro } from "@/src/lib/pro-guard";
 
 function s(v: FormDataEntryValue | null) {
   return String(v ?? "").trim();
@@ -35,6 +36,7 @@ function dt(v: FormDataEntryValue | null) {
  */
 export async function createFinance(formData: FormData) {
   const ctx = await requirePermission("finance");
+  await requirePro(ctx.tenant.id);
 
   const type = s(formData.get("type")).toLowerCase();
   const amount = n(formData.get("amount"));
@@ -88,9 +90,17 @@ export async function updateFinance(id: string, formData: FormData) {
 
   // ensure it belongs to tenant, then update
   const existing = await prisma.finance.findFirst({
-    where: { id, tenantId: tenant.id },
-    select: { id: true },
-  });
+      where: { id, tenantId: tenant.id },
+      select: { id: true, donationId: true },
+    });
+
+    if (!existing) redirect("/app/finance?error=Record not found");
+
+    // ✅ Stripe-linked finance entries are locked
+    if (existing.donationId) {
+      redirect(`/app/finance?error=This record is locked because it came from a Stripe donation`);
+    }
+
 
   if (!existing) redirect("/app/finance?error=Record not found");
 
@@ -116,6 +126,18 @@ export async function updateFinance(id: string, formData: FormData) {
 export async function deleteFinance(id: string) {
   const { tenant } = await requireTenant();
   await requirePermission("finance");
+
+  const existing = await prisma.finance.findFirst({
+      where: { id, tenantId: tenant.id },
+      select: { id: true, donationId: true },
+    });
+
+    if (!existing) redirect("/app/finance?error=Record not found");
+
+    if (existing.donationId) {
+      redirect(`/app/finance?error=This record is locked because it came from a Stripe donation`);
+    }
+
 
   await prisma.finance.deleteMany({
     where: { id, tenantId: tenant.id },

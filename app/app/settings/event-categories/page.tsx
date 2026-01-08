@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/src/lib/prisma";
 import { requireTenant } from "@/src/lib/guards";
 import { createEventCategory, deleteEventCategory } from "@/src/lib/settings.actions";
+import { requirePro } from "@/src/lib/pro-guard";
 
 export default async function EventCategoriesPage() {
   const { session, tenant } = await requireTenant();
   if (!(session.role === "OWNER" || session.role === "ADMIN")) redirect("/app");
+  await requirePro(tenant.id);
 
   const categories: EventCategory[] = await prisma.eventCategory.findMany({
     where: { tenantId: tenant.id },

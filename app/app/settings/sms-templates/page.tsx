@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
 import { createSmsTemplate, deleteSmsTemplate } from "@/src/lib/sms.actions";
+import { requirePro } from "@/src/lib/pro-guard";
 
 export default async function SmsTemplatesAdminPage() {
   const { tenant, session } = await requireTenant();
+  await requirePro(tenant.id);
 
   // Only OWNER/ADMIN can manage templates
   const membership = await prisma.userTenant.findUnique({

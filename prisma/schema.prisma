@@ -24,6 +24,13 @@ enum SmsProvider {
   OTHER
 }
 
+enum MemberSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+
 model Tenant {
   id        String   @id @default(cuid()) @db.VarChar(30)
   name      String   @db.VarChar(191)
@@ -34,19 +41,29 @@ model Tenant {
   domains Domain[]
   users   UserTenant[]
 
-  members     Member[]
-  leaders     Leader[]
-  attendances Attendance[]
-  finances    Finance[]
+  members      Member[]
+  leaders      Leader[]
+  attendances  Attendance[]
+  finances     Finance[]
   smsTemplates SmsTemplate[]
 
-  incomeCategories     IncomeCategory[]
-  expenseCategories    ExpenseCategory[]
-  eventCategories      EventCategory[]
-  churchUnitCategories ChurchUnitCategory[]
+  incomeCategories      IncomeCategory[]
+  expenseCategories     ExpenseCategory[]
+  eventCategories       EventCategory[]
+  churchUnitCategories  ChurchUnitCategory[]
+  // ✅ Stripe settings (one per tenant)
+  stripeProviderSetting StripeProviderSetting?
+
+  // ✅ Donations
+  donations Donation[]
+  donationFunds DonationFund[]  // ✅ add this
 
   // ✅ One-to-one (optional) provider settings per tenant
   smsProviderSetting SmsProviderSetting?
+
+  memberSubmissions MemberSubmission[]
+  subscription TenantSubscription?
+
 
   @@index([slug])
 }
@@ -97,25 +114,25 @@ model UserTenant {
 }
 
 model Member {
-  id              String   @id @default(cuid()) @db.VarChar(30)
-  tenantId        String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  firstName       String   @db.VarChar(191)
-  lastName        String?  @db.VarChar(191)
-  gender          String?  @db.VarChar(32)
+  firstName String  @db.VarChar(191)
+  lastName  String? @db.VarChar(191)
+  gender    String? @db.VarChar(32)
 
-  mobileNumber    String?  @db.VarChar(32)
-  email           String?  @db.VarChar(191)
+  mobileNumber String? @db.VarChar(32)
+  email        String? @db.VarChar(191)
 
   dateOfBirth     DateTime?
   anniversaryDate DateTime?
 
-  churchUnit      String?  @db.VarChar(191)
-  churchLeader    String?  @db.VarChar(191)
+  churchUnit   String? @db.VarChar(191)
+  churchLeader String? @db.VarChar(191)
 
-  customFields    Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  customFields Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -124,21 +141,61 @@ model Member {
   @@index([tenantId, mobileNumber])
 }
 
+model MemberSubmission {
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
+
+  // same fields as Member (keep it simple & consistent)
+  firstName String  @db.VarChar(191)
+  lastName  String? @db.VarChar(191)
+  gender    String? @db.VarChar(32)
+
+  mobileNumber String? @db.VarChar(32)
+  email        String? @db.VarChar(191)
+
+  dateOfBirth     DateTime?
+  anniversaryDate DateTime?
+
+  churchUnit   String? @db.VarChar(191)
+  churchLeader String? @db.VarChar(191)
+
+  status MemberSubmissionStatus @default(PENDING)
+
+  // approval metadata
+  reviewedAt  DateTime?
+  reviewedBy  String? @db.VarChar(30)
+  rejectReason String? @db.Text
+
+  // link to created member (after approval)
+  memberId String?  @unique @db.VarChar(30)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+  @@index([tenantId, mobileNumber])
+}
+
+
 model Leader {
-  id           String   @id @default(cuid()) @db.VarChar(30)
-  tenantId     String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  firstName    String   @db.VarChar(191)
-  lastName     String   @db.VarChar(191)
+  firstName String @db.VarChar(191)
+  lastName  String @db.VarChar(191)
 
-  mobileNumber String   @db.VarChar(32)
-  email        String   @db.VarChar(191)
+  mobileNumber String @db.VarChar(32)
+  email        String @db.VarChar(191)
 
-  churchUnit   String   @db.VarChar(191)
-  membersCount Int      @default(0)
+  churchUnit   String @db.VarChar(191)
+  membersCount Int    @default(0)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -147,16 +204,16 @@ model Leader {
 }
 
 model Attendance {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  men       Int
-  women     Int
-  children  Int
-  date      DateTime
+  men      Int
+  women    Int
+  children Int
+  date     DateTime
 
-  event     String   @db.VarChar(191)
-  total     Int
+  event String @db.VarChar(191)
+  total Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -167,17 +224,20 @@ model Attendance {
 }
 
 model Finance {
-  id          String   @id @default(cuid()) @db.VarChar(30)
-  tenantId    String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  amount      Decimal  @db.Decimal(10, 2)
-  type        String   @db.VarChar(32) // "income" | "expense"
-  category    String?  @db.VarChar(180)
-  description String?  @db.VarChar(191)
-  date        DateTime
+  amount      Decimal   @db.Decimal(10, 2)
+  type        String    @db.VarChar(32) // "income" | "expense"
+  category    String?   @db.VarChar(180)
+  description String?   @db.VarChar(191)
+  donationId  String?   @unique @db.VarChar(30)
+  donation    Donation? @relation(fields: [donationId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  date DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -187,11 +247,11 @@ model Finance {
 }
 
 model SmsTemplate {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  name      String   @db.VarChar(191)
-  message   String   @db.Text
+  name    String @db.VarChar(191)
+  message String @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -202,10 +262,10 @@ model SmsTemplate {
 }
 
 model IncomeCategory {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  name      String   @db.VarChar(191)
+  name String @db.VarChar(191)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -217,10 +277,10 @@ model IncomeCategory {
 }
 
 model ExpenseCategory {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  name      String   @db.VarChar(191)
+  name String @db.VarChar(191)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -232,10 +292,10 @@ model ExpenseCategory {
 }
 
 model EventCategory {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  name      String   @db.VarChar(191)
+  name String @db.VarChar(191)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -247,11 +307,11 @@ model EventCategory {
 }
 
 model ChurchUnitCategory {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
 
-  name      String   @db.VarChar(191)
-  alias     String   @db.VarChar(191)
+  name  String @db.VarChar(191)
+  alias String @db.VarChar(191)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -290,25 +350,132 @@ enum SmsSendStatus {
 }
 
 model SmsLog {
-  id         String        @id @default(cuid()) @db.VarChar(30)
+  id String @id @default(cuid()) @db.VarChar(30)
 
-  tenantId   String        @db.VarChar(30)
-  templateId String?       @db.VarChar(30)
-  memberId   String?       @db.VarChar(30)
+  tenantId   String  @db.VarChar(30)
+  templateId String? @db.VarChar(30)
+  memberId   String? @db.VarChar(30)
 
-  to         String        @db.VarChar(64)
-  message    String        @db.Text
-  status     SmsSendStatus
-  error      String?       @db.Text
+  to      String        @db.VarChar(64)
+  message String        @db.Text
+  status  SmsSendStatus
+  error   String?       @db.Text
 
-  provider   SmsProvider?
-  tag        String?       @db.VarChar(191)
+  provider SmsProvider?
+  tag      String?      @db.VarChar(191)
 
-  createdAt  DateTime      @default(now())
-
+  createdAt DateTime @default(now())
 
   @@index([tenantId, createdAt])
   @@index([tenantId, templateId])
   @@index([tenantId, memberId])
 }
+
+enum StripeMode {
+  TEST
+  LIVE
+}
+
+model StripeProviderSetting {
+  // one row per tenant
+  tenantId String @id @db.VarChar(30)
+
+  mode StripeMode @default(TEST)
+
+  // encrypted Stripe Secret Key (sk_test / sk_live)
+  secretKeyEnc Bytes?
+  secretKeyIv  Bytes?
+  secretKeyTag Bytes?
+
+  // optional but nice: store publishable key too
+  publishableKey String? @db.VarChar(191)
+
+  // Stripe webhook signing secret (whsec_...)
+  webhookSecretEnc Bytes?
+  webhookSecretIv  Bytes?
+  webhookSecretTag Bytes?
+
+  currency String @default("gbp") @db.VarChar(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+enum DonationStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+}
+
+model Donation {
+  id       String @id @default(cuid()) @db.VarChar(30)
+  tenantId String @db.VarChar(30)
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @db.VarChar(10)
+
+  isRecurring Boolean @default(false)
+  interval    String? @db.VarChar(16) // "month" | "year"
+
+  giftAid    Boolean @default(false)
+  donorName  String? @db.VarChar(191)
+  donorEmail String? @db.VarChar(191)
+
+  address1 String?  @db.VarChar(191)
+  address2 String?  @db.VarChar(191)
+  city     String?  @db.VarChar(191)
+  county   String?  @db.VarChar(191)
+  postcode String?  @db.VarChar(32)
+  country  String?  @db.VarChar(2)
+  finance  Finance?
+
+  status DonationStatus @default(PENDING)
+
+  stripeSessionId       String? @unique @db.VarChar(191)
+  stripePaymentIntentId String? @unique @db.VarChar(191)
+  stripeSubscriptionId  String? @unique @db.VarChar(191)
+
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+}
+
+model DonationFund {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+  name      String   @db.VarChar(191)
+  isDefault Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, isDefault])
+}
+
+model TenantSubscription {
+  id                   String   @id @default(cuid())
+  tenantId             String   @unique
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  stripePriceId        String?
+  status               String   @default("inactive") // active, trialing, past_due, canceled, unpaid, inactive
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
 

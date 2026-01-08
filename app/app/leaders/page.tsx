@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Leader } from "@prisma/client";
 import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
+import { requirePro } from "@/src/lib/pro-guard";
 
 type SearchParams = {
   q?: string;
@@ -13,6 +14,7 @@ export default async function LeadersPage({
   searchParams: Promise<SearchParams>;
 }) {
   const { tenant } = await requireTenant();
+  await requirePro(tenant.id);
 
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();

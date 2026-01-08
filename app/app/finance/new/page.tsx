@@ -3,9 +3,11 @@ import Link from "next/link";
 import { prisma } from "@/src/lib/prisma";
 import FinanceNewForm from "./FinanceNewForm";
 import { requirePermission } from "@/src/lib/permissions";
+import { requirePro } from "@/src/lib/pro-guard";
 
 export default async function NewFinancePage() {
   const { tenant } = await requirePermission("finance");
+  await requirePro(tenant.id);
 
   const [incomeCategories, expenseCategories] = await Promise.all([
     prisma.incomeCategory.findMany({

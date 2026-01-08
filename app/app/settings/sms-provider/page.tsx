@@ -2,9 +2,11 @@
 import { requireAdmin } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import SmsProviderForm from "./SmsProviderForm";
+import { requirePro } from "@/src/lib/pro-guard";
 
 export default async function SmsProviderSettingsPage() {
   const { tenant } = await requireAdmin();
+  await requirePro(tenant.id);
 
   const existing = await prisma.smsProviderSetting.findUnique({
     where: { tenantId: tenant.id },

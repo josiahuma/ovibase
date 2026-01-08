@@ -4,9 +4,11 @@ import type { EventCategory } from "@prisma/client";
 import { requireTenant } from "@/src/lib/guards";
 import { prisma } from "@/src/lib/prisma";
 import { createAttendance } from "@/src/lib/attendance.actions";
+import { requirePro } from "@/src/lib/pro-guard";
 
 export default async function NewAttendancePage() {
   const { tenant } = await requireTenant();
+  await requirePro(tenant.id);
 
   const categories: EventCategory[] = await prisma.eventCategory.findMany({
     where: { tenantId: tenant.id },

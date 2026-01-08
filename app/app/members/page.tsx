@@ -11,7 +11,7 @@ type SearchParams = {
   // banners
   sms?: "sent" | "partial";
   count?: string; // sms=sent
-  sent?: string;  // sms=partial
+  sent?: string; // sms=partial
   failed?: string; // sms=partial
   error?: string;
 };
@@ -63,6 +63,11 @@ export default async function MembersPage({
       })
     : [];
 
+  // ✅ NEW: pending public join submissions count
+  const pendingSubmissionsCount = await prisma.memberSubmission.count({
+    where: { tenantId: tenant.id, status: "PENDING" },
+  });
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -75,13 +80,44 @@ export default async function MembersPage({
           </p>
         </div>
 
-        <Link
-          href="/app/members/new"
-          className="inline-flex items-center justify-center rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-medium hover:bg-slate-800"
-        >
-          + Add Member
-        </Link>
+        {/* ✅ Header actions */}
+        <div className="flex gap-2">
+          <Link
+            href="/app/members/submissions"
+            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Submissions
+            {pendingSubmissionsCount > 0 ? (
+              <span className="ml-2 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200">
+                {pendingSubmissionsCount}
+              </span>
+            ) : null}
+          </Link>
+
+          <Link
+            href="/app/members/new"
+            className="inline-flex items-center justify-center rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-medium hover:bg-slate-800"
+          >
+            + Add Member
+          </Link>
+        </div>
       </div>
+
+      {/* ✅ Optional: Pending submissions banner */}
+      {pendingSubmissionsCount > 0 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+          You have{" "}
+          <span className="font-semibold">{pendingSubmissionsCount}</span>{" "}
+          pending member submission(s) awaiting approval.{" "}
+          <Link
+            href="/app/members/submissions"
+            className="underline font-medium"
+          >
+            Review now
+          </Link>
+          .
+        </div>
+      ) : null}
 
       {/* ✅ Banner (success/partial/error) */}
       {sp.error ? (
@@ -105,7 +141,7 @@ export default async function MembersPage({
         </div>
       ) : null}
 
-      {/* ✅ Your existing search form (UNCHANGED) */}
+      {/* ✅ Search */}
       <form className="flex gap-2">
         <input
           name="q"
@@ -118,7 +154,7 @@ export default async function MembersPage({
         </button>
       </form>
 
-      {/* ✅ NEW: Bulk SMS card (matches your design language) */}
+      {/* ✅ Bulk SMS card */}
       {canSms ? (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -184,7 +220,7 @@ export default async function MembersPage({
         </div>
       ) : null}
 
-      {/* ✅ Your existing table (UNCHANGED) */}
+      {/* ✅ Members table */}
       <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-600">
@@ -194,12 +230,11 @@ export default async function MembersPage({
               <th className="text-left px-4 py-3 hidden md:table-cell">
                 Mobile
               </th>
-              <th className="text-left px-4 py-3 hidden lg:table-cell">
-                Unit
-              </th>
+              <th className="text-left px-4 py-3 hidden lg:table-cell">Unit</th>
               <th className="text-right px-4 py-3">Action</th>
             </tr>
           </thead>
+
           <tbody className="divide-y divide-slate-200">
             {members.length === 0 ? (
               <tr>
@@ -218,15 +253,19 @@ export default async function MembersPage({
                       {m.email || "—"} • {m.mobileNumber || "—"}
                     </div>
                   </td>
+
                   <td className="px-4 py-3 hidden md:table-cell text-slate-700">
                     {m.email || "—"}
                   </td>
+
                   <td className="px-4 py-3 hidden md:table-cell text-slate-700">
                     {m.mobileNumber || "—"}
                   </td>
+
                   <td className="px-4 py-3 hidden lg:table-cell text-slate-700">
                     {m.churchUnit || "—"}
                   </td>
+
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/app/members/${m.id}`}
