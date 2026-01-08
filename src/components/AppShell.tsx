@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import QRCode from "react-qr-code";
 import type { UserRole } from "@prisma/client";
+import { TenantPlan } from "../lib/billing";
 
 type Tenant = {
   id: string;
@@ -34,6 +35,7 @@ export default function AppShell({
   ut: UserTenant;
   isAdmin: boolean;
   donationUrl: string;
+  tenantPlan: TenantPlan;
   stripeEnabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
