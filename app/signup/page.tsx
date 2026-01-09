@@ -34,8 +34,7 @@ export default function SignupPage() {
       return;
     }
 
-    const base =
-      process.env.NEXT_PUBLIC_APP_BASE_DOMAIN || "ovibase.local:3000";
+    const base = process.env.NEXT_PUBLIC_APP_BASE_DOMAIN || "ovibase.local:3000";
     const isLocal = base.includes("local") || base.includes("localhost");
     const protocol = isLocal ? "http" : "https";
 
@@ -48,27 +47,37 @@ export default function SignupPage() {
         {/* Header */}
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Create your workspace
+            Set up your church on OviBase
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            OviBase for churches, charities & organisations
+            Create your church login and start organising your records in minutes.
           </p>
+        </div>
+
+        {/* Trust strip */}
+        <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+          <div className="font-medium text-slate-900">What you’ll get:</div>
+          <ul className="mt-1 list-disc pl-4 space-y-1">
+            <li>Your church’s private dashboard</li>
+            <li>Member records, attendance, finance and giving</li>
+            <li>Invite staff and control access</li>
+          </ul>
         </div>
 
         {/* Form */}
         <form onSubmit={onSubmit} className="space-y-4">
           <Field
-            label="Organisation name"
+            label="Church / Organisation name"
             name="tenantName"
             placeholder="e.g. Grace Church"
             required
           />
 
           <Field
-            label="Workspace subdomain"
+            label="Choose your church login name"
             name="tenantSlug"
             placeholder="e.g. gracechurch"
-            hint="This becomes your login URL"
+            hint="This becomes your login link, like: gracechurch.ovibase.com"
             required
           />
 
@@ -88,10 +97,11 @@ export default function SignupPage() {
           />
 
           <Field
-            label="Password"
+            label="Create a password"
             name="password"
             type="password"
             placeholder="••••••••"
+            hint="Use at least 8 characters."
             required
           />
 
@@ -105,17 +115,14 @@ export default function SignupPage() {
             disabled={loading}
             className="mt-2 w-full inline-flex items-center justify-center rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800 disabled:opacity-60"
           >
-            {loading ? "Creating workspace…" : "Create Workspace"}
+            {loading ? "Creating your church account…" : "Create church account"}
           </button>
         </form>
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-slate-500">
-          Already have a workspace?{" "}
-          <a
-            href="/login"
-            className="font-medium text-slate-900 hover:underline"
-          >
+          Already have an account?{" "}
+          <a href="/login" className="font-medium text-slate-900 hover:underline">
             Sign in
           </a>
         </div>

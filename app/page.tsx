@@ -1,46 +1,13 @@
+//ovibase/app/page.tsx
 import Image from "next/image";
 import Link from "next/link";
+import PublicHeader from "@/src/components/PublicHeader";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* Top nav */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-slate-200">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                <Image
-                  src="/ob-logo.png"
-                  alt="OviBase"
-                  fill
-                  className="object-contain p-1"
-                  priority
-                />
-              </div>
-              <div className="leading-tight">
-                <div className="font-bold tracking-tight text-slate-900">OviBase</div>
-                <div className="text-xs text-slate-500">Church admin made simple</div>
-              </div>
-            </Link>
-
-            <div className="flex items-center gap-2">
-              <Link
-                href="/login"
-                className="hidden sm:inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Login
-              </Link>
-              <Link
-                href="/signup"
-                className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
@@ -49,18 +16,18 @@ export default function HomePage() {
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Multi-tenant • Roles & permissions • Bulk SMS
+                Members • Attendance • Finance • Messaging • Donations
               </div>
 
               <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight">
-                Manage members, attendance, finance & SMS —{" "}
-                <span className="text-slate-900">all in one place.</span>
+                Keep your church records organised —{" "}
+                <span className="text-slate-900">without the stress.</span>
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 max-w-xl">
-                OviBase helps churches and organizations track members, record attendance,
-                manage finance entries, and send bulk SMS reminders — with secure tenant workspaces
-                and staff permissions.
+                OviBase helps you manage member details, attendance, income & expenses,
+                giving/donations, and communication — in one simple system your staff and
+                volunteers can actually use.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -68,20 +35,24 @@ export default function HomePage() {
                   href="/signup"
                   className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
                 >
-                  Create your workspace
+                  Set up your church
                 </Link>
                 <Link
                   href="/login"
                   className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  Login
+                  I already have an account
                 </Link>
               </div>
 
               <div className="grid grid-cols-3 gap-4 pt-4 max-w-md">
-                <Stat value="1 min" label="Setup time" />
-                <Stat value="Secure" label="Tenant isolation" />
-                <Stat value="Fast" label="Daily workflow" />
+                <Stat value="Minutes" label="to get started" />
+                <Stat value="Clear" label="records every week" />
+                <Stat value="Confident" label="team access" />
+              </div>
+
+              <div className="text-xs text-slate-500">
+                Built for churches, charities and organisations that want less admin and fewer spreadsheets.
               </div>
             </div>
 
@@ -99,23 +70,25 @@ export default function HomePage() {
 
                 <div className="p-5 space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <MiniCard title="Members" value="1,245" />
-                    <MiniCard title="Leaders" value="62" />
-                    <MiniCard title="Attendance" value="8,930" />
-                    <MiniCard title="Finance entries" value="2,114" />
+                    <MiniCard title="Church members" value="1,245" />
+                    <MiniCard title="Leaders & teams" value="62" />
+                    <MiniCard title="Attendance records" value="8,930" />
+                    <MiniCard title="Income & expenses" value="2,114" />
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-sm font-medium text-slate-900">Bulk SMS</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      Messages & reminders
+                    </div>
                     <div className="text-sm text-slate-600 mt-1">
-                      Send birthday/anniversary reminders in seconds.
+                      Send service reminders, meeting updates and announcements in seconds.
                     </div>
                     <div className="mt-3 flex gap-2">
                       <div className="h-9 flex-1 rounded-lg border border-slate-200 bg-white" />
                       <div className="h-9 w-24 rounded-lg bg-slate-900" />
                     </div>
                     <div className="text-xs text-slate-500 mt-3">
-                      Works with provider settings you configure.
+                      Great for admins and volunteers — no complicated setup screens.
                     </div>
                   </div>
                 </div>
@@ -128,43 +101,84 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Why OviBase */}
+      <section className="border-t border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-14">
+          <div className="max-w-2xl">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+              Why churches choose OviBase
+            </h2>
+            <p className="text-slate-600 mt-2">
+              Most church admin tools become “too much” over time. OviBase is built to stay simple —
+              while still giving you everything you need.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <WhyCard
+              title="One place for your records"
+              desc="Stop chasing spreadsheets, notebooks and WhatsApp messages. Keep members, attendance, finance and giving together."
+            />
+            <WhyCard
+              title="Made for staff and volunteers"
+              desc="Clear screens and simple steps — so anyone helping in the office can use it confidently."
+            />
+            <WhyCard
+              title="You control access"
+              desc="Give helpers access only to what they need. Keep sensitive areas restricted to the right people."
+            />
+            <WhyCard
+              title="Week-by-week clarity"
+              desc="Record attendance and view totals easily. See progress over time without extra work."
+            />
+            <WhyCard
+              title="Better communication"
+              desc="Send reminders and announcements quickly — using templates so you don’t type the same message repeatedly."
+            />
+            <WhyCard
+              title="Built to grow with you"
+              desc="Start small, then unlock more modules when you’re ready — without changing your process."
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section className="border-t border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-14">
           <div className="max-w-2xl">
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-              Everything you need for church administration
+              Everything your church office needs
             </h2>
             <p className="text-slate-600 mt-2">
-              Simple screens, clear workflows, and role-based access — so your team can help without
-              breaking things.
+              Clear workflows that reduce mistakes, save time, and keep your records up to date.
             </p>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Feature
-              title="Members"
-              desc="Store member profiles, contacts, birthdays & custom fields."
+              title="Member records"
+              desc="Store contact details, birthdays, notes and custom fields — and find them instantly."
             />
             <Feature
-              title="Leaders"
-              desc="Maintain leader records and link them to units & groups."
+              title="Leaders & groups"
+              desc="Keep track of leaders, teams and units so you know who is responsible for what."
             />
             <Feature
-              title="Attendance"
-              desc="Record weekly attendance and events with totals."
+              title="Attendance tracking"
+              desc="Record weekly service attendance and event totals without paperwork."
             />
             <Feature
-              title="Finance"
-              desc="Track income & expenses with categories and reporting-ready data."
+              title="Income & expenses"
+              desc="Keep a clear record of what comes in and what goes out — ready for reporting."
             />
             <Feature
-              title="SMS Templates"
-              desc="Create reusable templates for reminders and bulk messaging."
+              title="Giving & donations"
+              desc="Accept and track online giving securely, including recurring donations when needed."
             />
             <Feature
-              title="Users & Permissions"
-              desc="Add staff accounts and choose what they can access (members, finance, SMS, etc)."
+              title="Team access"
+              desc="Add staff accounts and control what each person can view or manage."
             />
           </div>
         </div>
@@ -174,13 +188,25 @@ export default function HomePage() {
       <section className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-14">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-            Get started in 3 steps
+            Get started in 3 simple steps
           </h2>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <Step n="1" title="Create your workspace" desc="Register and get your tenant instantly." />
-            <Step n="2" title="Invite staff" desc="Create staff users and tick permissions." />
-            <Step n="3" title="Track & send SMS" desc="Record data and send reminders when needed." />
+            <Step
+              n="1"
+              title="Create your church workspace"
+              desc="Set up your church in minutes and get your own private login link."
+            />
+            <Step
+              n="2"
+              title="Add your team"
+              desc="Invite staff or volunteers and give them the right access."
+            />
+            <Step
+              n="3"
+              title="Start recording & communicating"
+              desc="Track members, attendance and finances — and send reminders when needed."
+            />
           </div>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-3">
@@ -188,14 +214,18 @@ export default function HomePage() {
               href="/signup"
               className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
             >
-              Create your workspace
+              Set up your church
             </Link>
             <Link
               href="/login"
               className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              I already have an account
+              Sign in
             </Link>
+          </div>
+
+          <div className="mt-6 text-xs text-slate-500">
+            Tip: Start with the basics (members), then unlock Pro features when you’re ready.
           </div>
         </div>
       </section>
@@ -209,19 +239,21 @@ export default function HomePage() {
             </div>
             <div>
               <div className="font-semibold">OviBase</div>
-              <div className="text-xs text-slate-500">© {new Date().getFullYear()}</div>
+              <div className="text-xs text-slate-500">
+                Helping churches stay organised • © {new Date().getFullYear()}
+              </div>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-3 text-sm">
             <Link className="text-slate-600 hover:text-slate-900" href="/login">
-              Login
+              Sign in
             </Link>
             <Link className="text-slate-600 hover:text-slate-900" href="/signup">
-              Register
+              Set up your church
             </Link>
             <Link className="text-slate-600 hover:text-slate-900" href="/app">
-              Go to App
+              Go to dashboard
             </Link>
           </div>
         </div>
@@ -244,7 +276,7 @@ function MiniCard({ title, value }: { title: string; value: string }) {
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="text-xs text-slate-500">{title}</div>
       <div className="text-xl font-semibold mt-2">{value}</div>
-      <div className="text-xs text-slate-500 mt-2">View</div>
+      <div className="text-xs text-slate-500 mt-2">Open</div>
     </div>
   );
 }
@@ -265,6 +297,15 @@ function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
         {n}
       </div>
       <div className="mt-3 font-semibold">{title}</div>
+      <div className="text-sm text-slate-600 mt-2">{desc}</div>
+    </div>
+  );
+}
+
+function WhyCard({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="font-semibold text-slate-900">{title}</div>
       <div className="text-sm text-slate-600 mt-2">{desc}</div>
     </div>
   );
