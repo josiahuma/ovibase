@@ -381,7 +381,21 @@ export default function DonateClient({
             {loading ? "Redirecting..." : "Proceed"}
           </button>
         </div>
+            </div>
+
+      {/* Powered by OviBase */}
+      <div className="mt-6 text-center text-xs text-slate-400">
+        Powered by{" "}
+        <a
+          href="https://ovibase.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-slate-500 hover:text-orange-600"
+        >
+          OviBase
+        </a>
       </div>
     </div>
   );
 }
+
