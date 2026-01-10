@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,14 +7,336 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  OWNER
-  ADMIN
-  STAFF
-  VIEWER
+model attendance {
+  id        String   @id @db.VarChar(32)
+  tenantId  String   @db.VarChar(30)
+  men       Int
+  women     Int
+  children  Int
+  date      DateTime
+  event     String
+  total     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Attendance_tenantId_fkey")
+
+  @@index([tenantId, date], map: "Attendance_tenantId_date_idx")
 }
 
-enum SmsProvider {
+model churchunitcategory {
+  id        String   @id @db.VarChar(32)
+  tenantId  String   @db.VarChar(30)
+  name      String
+  alias     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "ChurchUnitCategory_tenantId_fkey")
+
+  @@unique([tenantId, alias], map: "ChurchUnitCategory_tenantId_alias_key")
+  @@index([tenantId], map: "ChurchUnitCategory_tenantId_idx")
+}
+
+model domain {
+  id        String   @id @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+  hostname  String   @unique(map: "Domain_hostname_key")
+  isPrimary Boolean  @default(true)
+  createdAt DateTime @default(now())
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Domain_tenantId_fkey")
+
+  @@index([tenantId], map: "Domain_tenantId_idx")
+}
+
+model donation {
+  id                    String          @id @db.VarChar(30)
+  tenantId              String          @db.VarChar(30)
+  amount                Decimal         @db.Decimal(10, 2)
+  currency              String          @db.VarChar(10)
+  isRecurring           Boolean         @default(false)
+  interval              String?         @db.VarChar(16)
+  giftAid               Boolean         @default(false)
+  donorName             String?
+  donorEmail            String?
+  address1              String?
+  address2              String?
+  city                  String?
+  county                String?
+  postcode              String?         @db.VarChar(32)
+  country               String?         @db.VarChar(2)
+  status                donation_status @default(PENDING)
+  stripeSessionId       String?         @unique(map: "Donation_stripeSessionId_key")
+  stripePaymentIntentId String?         @unique(map: "Donation_stripePaymentIntentId_key")
+  stripeSubscriptionId  String?         @unique(map: "Donation_stripeSubscriptionId_key")
+  createdAt             DateTime        @default(now())
+  paidAt                DateTime?
+
+  @@index([tenantId, createdAt], map: "Donation_tenantId_createdAt_idx")
+  @@index([tenantId, status], map: "Donation_tenantId_status_idx")
+}
+
+model donationfund {
+  id        String   @id @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "DonationFund_tenantId_fkey")
+
+  @@unique([tenantId, name], map: "DonationFund_tenantId_name_key")
+  @@index([tenantId], map: "DonationFund_tenantId_idx")
+  @@index([tenantId, isDefault], map: "DonationFund_tenantId_isDefault_idx")
+}
+
+model eventcategory {
+  id        String   @id @db.VarChar(32)
+  tenantId  String   @db.VarChar(30)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "EventCategory_tenantId_fkey")
+
+  @@unique([tenantId, name], map: "EventCategory_tenantId_name_key")
+  @@index([tenantId], map: "EventCategory_tenantId_idx")
+}
+
+model expensecategory {
+  id        String   @id @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "ExpenseCategory_tenantId_fkey")
+
+  @@unique([tenantId, name], map: "ExpenseCategory_tenantId_name_key")
+  @@index([tenantId], map: "ExpenseCategory_tenantId_idx")
+}
+
+model finance {
+  id          String   @id @db.VarChar(30)
+  tenantId    String   @db.VarChar(30)
+  amount      Decimal  @db.Decimal(10, 2)
+  type        String   @db.VarChar(32)
+  category    String?  @db.VarChar(180)
+  description String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  donationId  String?  @unique(map: "Finance_donationId_key") @db.VarChar(30)
+  tenant      tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Finance_tenantId_fkey")
+
+  @@index([tenantId, category], map: "Finance_tenantId_category_idx")
+  @@index([tenantId, date], map: "Finance_tenantId_date_idx")
+  @@index([tenantId, type], map: "Finance_tenantId_type_idx")
+}
+
+model incomecategory {
+  id        String   @id @db.VarChar(30)
+  tenantId  String   @db.VarChar(30)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "IncomeCategory_tenantId_fkey")
+
+  @@unique([tenantId, name], map: "IncomeCategory_tenantId_name_key")
+  @@index([tenantId], map: "IncomeCategory_tenantId_idx")
+}
+
+model leader {
+  id           String   @id @db.VarChar(32)
+  tenantId     String   @db.VarChar(30)
+  firstName    String
+  lastName     String
+  mobileNumber String   @db.VarChar(32)
+  email        String
+  churchUnit   String
+  membersCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  tenant       tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Leader_tenantId_fkey")
+
+  @@unique([tenantId, email], map: "Leader_tenantId_email_key")
+  @@index([tenantId], map: "Leader_tenantId_idx")
+}
+
+model member {
+  id              String    @id @db.VarChar(32)
+  tenantId        String    @db.VarChar(30)
+  firstName       String
+  lastName        String?
+  gender          String?   @db.VarChar(32)
+  mobileNumber    String?   @db.VarChar(32)
+  email           String?
+  dateOfBirth     DateTime?
+  anniversaryDate DateTime?
+  churchUnit      String?
+  churchLeader    String?
+  customFields    Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  tenant          tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Member_tenantId_fkey")
+
+  @@index([tenantId, email], map: "Member_tenantId_email_idx")
+  @@index([tenantId], map: "Member_tenantId_idx")
+  @@index([tenantId, mobileNumber], map: "Member_tenantId_mobileNumber_idx")
+}
+
+model membersubmission {
+  id              String                  @id @db.VarChar(30)
+  tenantId        String                  @db.VarChar(30)
+  firstName       String
+  lastName        String?
+  gender          String?                 @db.VarChar(32)
+  mobileNumber    String?                 @db.VarChar(32)
+  email           String?
+  dateOfBirth     DateTime?
+  anniversaryDate DateTime?
+  churchUnit      String?
+  churchLeader    String?
+  status          membersubmission_status @default(PENDING)
+  reviewedAt      DateTime?
+  reviewedBy      String?                 @db.VarChar(30)
+  rejectReason    String?                 @db.Text
+  memberId        String?                 @unique(map: "MemberSubmission_memberId_key") @db.VarChar(30)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime
+  tenant          tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "MemberSubmission_tenantId_fkey")
+
+  @@index([tenantId, createdAt], map: "MemberSubmission_tenantId_createdAt_idx")
+  @@index([tenantId, email], map: "MemberSubmission_tenantId_email_idx")
+  @@index([tenantId, mobileNumber], map: "MemberSubmission_tenantId_mobileNumber_idx")
+  @@index([tenantId, status], map: "MemberSubmission_tenantId_status_idx")
+}
+
+model smslog {
+  id         String           @id @db.VarChar(30)
+  tenantId   String           @db.VarChar(30)
+  templateId String?
+  memberId   String?
+  to         String           @db.VarChar(64)
+  message    String           @db.Text
+  status     smslog_status
+  error      String?          @db.Text
+  provider   smslog_provider?
+  tag        String?
+  createdAt  DateTime         @default(now())
+
+  @@index([tenantId, createdAt], map: "SmsLog_tenantId_createdAt_idx")
+  @@index([tenantId, memberId], map: "SmsLog_tenantId_memberId_idx")
+  @@index([tenantId, templateId], map: "SmsLog_tenantId_templateId_idx")
+}
+
+model smsprovidersetting {
+  tenantId  String                      @id @db.VarChar(30)
+  provider  smsprovidersetting_provider @default(TEXTLOCAL)
+  apiKeyEnc Bytes?
+  apiKeyIv  Bytes?
+  apiKeyTag Bytes?
+  senderId  String?                     @db.VarChar(64)
+  from      String?                     @db.VarChar(64)
+  baseUrl   String?
+  meta      Json?
+  createdAt DateTime                    @default(now())
+  updatedAt DateTime
+  tenant    tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsProviderSetting_tenantId_fkey")
+}
+
+model smstemplate {
+  id        String   @id @db.VarChar(32)
+  tenantId  String   @db.VarChar(30)
+  name      String
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsTemplate_tenantId_fkey")
+
+  @@index([tenantId], map: "SmsTemplate_tenantId_idx")
+}
+
+model stripeprovidersetting {
+  tenantId         String                     @id @db.VarChar(30)
+  mode             stripeprovidersetting_mode @default(TEST)
+  secretKeyEnc     Bytes?
+  secretKeyIv      Bytes?
+  secretKeyTag     Bytes?
+  publishableKey   String?
+  webhookSecretEnc Bytes?
+  webhookSecretIv  Bytes?
+  webhookSecretTag Bytes?
+  currency         String                     @default("gbp") @db.VarChar(10)
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime
+}
+
+model tenant {
+  id                 String               @id @db.VarChar(30)
+  name               String
+  slug               String               @unique(map: "Tenant_slug_key") @db.VarChar(63)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  attendance         attendance[]
+  churchunitcategory churchunitcategory[]
+  domain             domain[]
+  donationfund       donationfund[]
+  eventcategory      eventcategory[]
+  expensecategory    expensecategory[]
+  finance            finance[]
+  incomecategory     incomecategory[]
+  leader             leader[]
+  member             member[]
+  membersubmission   membersubmission[]
+  smsprovidersetting smsprovidersetting?
+  smstemplate        smstemplate[]
+  tenantsubscription tenantsubscription?
+  usertenant         usertenant[]
+
+  @@index([slug], map: "Tenant_slug_idx")
+}
+
+model tenantsubscription {
+  id                   String    @id
+  tenantId             String    @unique(map: "TenantSubscription_tenantId_key")
+  stripeCustomerId     String?   @unique(map: "TenantSubscription_stripeCustomerId_key")
+  stripeSubscriptionId String?   @unique(map: "TenantSubscription_stripeSubscriptionId_key")
+  stripePriceId        String?
+  status               String    @default("inactive")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime
+  tenant               tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "TenantSubscription_tenantId_fkey")
+}
+
+model user {
+  id           String       @id @db.VarChar(30)
+  name         String?
+  email        String       @unique(map: "User_email_key")
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime
+  usertenant   usertenant[]
+}
+
+model usertenant {
+  id            String          @id @db.VarChar(30)
+  userId        String          @db.VarChar(30)
+  tenantId      String          @db.VarChar(30)
+  role          usertenant_role @default(STAFF)
+  createdAt     DateTime        @default(now())
+  canMembers    Boolean         @default(false)
+  canLeaders    Boolean         @default(false)
+  canAttendance Boolean         @default(false)
+  canFinance    Boolean         @default(false)
+  canSms        Boolean         @default(false)
+  tenant        tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "UserTenant_tenantId_fkey")
+  user          user            @relation(fields: [userId], references: [id], onDelete: Cascade, map: "UserTenant_userId_fkey")
+
+  @@unique([userId, tenantId], map: "UserTenant_userId_tenantId_key")
+  @@index([tenantId], map: "UserTenant_tenantId_idx")
+  @@index([userId], map: "UserTenant_userId_idx")
+}
+
+enum smsprovidersetting_provider {
   TEXTLOCAL
   TWILIO
   INFOBIP
@@ -24,458 +344,40 @@ enum SmsProvider {
   OTHER
 }
 
-enum MemberSubmissionStatus {
+enum stripeprovidersetting_mode {
+  TEST
+  LIVE
+}
+
+enum usertenant_role {
+  OWNER
+  ADMIN
+  STAFF
+  VIEWER
+}
+
+enum smslog_status {
+  SENT
+  FAILED
+}
+
+enum smslog_provider {
+  TEXTLOCAL
+  TWILIO
+  INFOBIP
+  VONAGE
+  OTHER
+}
+
+enum membersubmission_status {
   PENDING
   APPROVED
   REJECTED
 }
 
-
-model Tenant {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  name      String   @db.VarChar(191)
-  slug      String   @unique @db.VarChar(63)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  domains Domain[]
-  users   UserTenant[]
-
-  members      Member[]
-  leaders      Leader[]
-  attendances  Attendance[]
-  finances     Finance[]
-  smsTemplates SmsTemplate[]
-
-  incomeCategories      IncomeCategory[]
-  expenseCategories     ExpenseCategory[]
-  eventCategories       EventCategory[]
-  churchUnitCategories  ChurchUnitCategory[]
-  // ✅ Stripe settings (one per tenant)
-  stripeProviderSetting StripeProviderSetting?
-
-  // ✅ Donations
-  donations Donation[]
-  donationFunds DonationFund[]  // ✅ add this
-
-  // ✅ One-to-one (optional) provider settings per tenant
-  smsProviderSetting SmsProviderSetting?
-
-  memberSubmissions MemberSubmission[]
-  subscription TenantSubscription?
-
-
-  @@index([slug])
-}
-
-model Domain {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
-  hostname  String   @unique @db.VarChar(191)
-  isPrimary Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-}
-
-model User {
-  id           String   @id @default(cuid()) @db.VarChar(30)
-  name         String?  @db.VarChar(191)
-  email        String   @unique @db.VarChar(191)
-  passwordHash String   @db.VarChar(191)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  tenants UserTenant[]
-}
-
-model UserTenant {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  userId    String   @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
-  role      UserRole @default(STAFF)
-  createdAt DateTime @default(now())
-
-  // Fine-grained permissions (for STAFF / VIEWER)
-  canMembers    Boolean @default(false)
-  canLeaders    Boolean @default(false)
-  canAttendance Boolean @default(false)
-  canFinance    Boolean @default(false)
-  canSms        Boolean @default(false) // dashboard send SMS / bulk SMS
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, tenantId])
-  @@index([tenantId])
-  @@index([userId])
-}
-
-model Member {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  firstName String  @db.VarChar(191)
-  lastName  String? @db.VarChar(191)
-  gender    String? @db.VarChar(32)
-
-  mobileNumber String? @db.VarChar(32)
-  email        String? @db.VarChar(191)
-
-  dateOfBirth     DateTime?
-  anniversaryDate DateTime?
-
-  churchUnit   String? @db.VarChar(191)
-  churchLeader String? @db.VarChar(191)
-
-  customFields Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([tenantId, email])
-  @@index([tenantId, mobileNumber])
-}
-
-model MemberSubmission {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  // same fields as Member (keep it simple & consistent)
-  firstName String  @db.VarChar(191)
-  lastName  String? @db.VarChar(191)
-  gender    String? @db.VarChar(32)
-
-  mobileNumber String? @db.VarChar(32)
-  email        String? @db.VarChar(191)
-
-  dateOfBirth     DateTime?
-  anniversaryDate DateTime?
-
-  churchUnit   String? @db.VarChar(191)
-  churchLeader String? @db.VarChar(191)
-
-  status MemberSubmissionStatus @default(PENDING)
-
-  // approval metadata
-  reviewedAt  DateTime?
-  reviewedBy  String? @db.VarChar(30)
-  rejectReason String? @db.Text
-
-  // link to created member (after approval)
-  memberId String?  @unique @db.VarChar(30)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, createdAt])
-  @@index([tenantId, status])
-  @@index([tenantId, email])
-  @@index([tenantId, mobileNumber])
-}
-
-
-model Leader {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  firstName String @db.VarChar(191)
-  lastName  String @db.VarChar(191)
-
-  mobileNumber String @db.VarChar(32)
-  email        String @db.VarChar(191)
-
-  churchUnit   String @db.VarChar(191)
-  membersCount Int    @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, email])
-  @@index([tenantId])
-}
-
-model Attendance {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  men      Int
-  women    Int
-  children Int
-  date     DateTime
-
-  event String @db.VarChar(191)
-  total Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, date])
-}
-
-model Finance {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  amount      Decimal   @db.Decimal(10, 2)
-  type        String    @db.VarChar(32) // "income" | "expense"
-  category    String?   @db.VarChar(180)
-  description String?   @db.VarChar(191)
-  donationId  String?   @unique @db.VarChar(30)
-  donation    Donation? @relation(fields: [donationId], references: [id])
-
-  date DateTime
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, date])
-  @@index([tenantId, type])
-  @@index([tenantId, category])
-}
-
-model SmsTemplate {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  name    String @db.VarChar(191)
-  message String @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-}
-
-model IncomeCategory {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  name String @db.VarChar(191)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, name])
-  @@index([tenantId])
-}
-
-model ExpenseCategory {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  name String @db.VarChar(191)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, name])
-  @@index([tenantId])
-}
-
-model EventCategory {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  name String @db.VarChar(191)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, name])
-  @@index([tenantId])
-}
-
-model ChurchUnitCategory {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  name  String @db.VarChar(191)
-  alias String @db.VarChar(191)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, alias])
-  @@index([tenantId])
-}
-
-model SmsProviderSetting {
-  // ✅ Make this a strict "one row per tenant"
-  tenantId String @id @db.VarChar(30)
-
-  provider SmsProvider @default(TEXTLOCAL)
-
-  // Encrypted secret stored server-side (apiKey/token)
-  apiKeyEnc Bytes?
-  apiKeyIv  Bytes?
-  apiKeyTag Bytes?
-
-  senderId String? @db.VarChar(64)
-  from     String? @db.VarChar(64) // Twilio "From" number, etc.
-  baseUrl  String? @db.VarChar(191)
-  meta     Json?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-}
-
-enum SmsSendStatus {
-  SENT
-  FAILED
-}
-
-model SmsLog {
-  id String @id @default(cuid()) @db.VarChar(30)
-
-  tenantId   String  @db.VarChar(30)
-  templateId String? @db.VarChar(30)
-  memberId   String? @db.VarChar(30)
-
-  to      String        @db.VarChar(64)
-  message String        @db.Text
-  status  SmsSendStatus
-  error   String?       @db.Text
-
-  provider SmsProvider?
-  tag      String?      @db.VarChar(191)
-
-  createdAt DateTime @default(now())
-
-  @@index([tenantId, createdAt])
-  @@index([tenantId, templateId])
-  @@index([tenantId, memberId])
-}
-
-enum StripeMode {
-  TEST
-  LIVE
-}
-
-model StripeProviderSetting {
-  // one row per tenant
-  tenantId String @id @db.VarChar(30)
-
-  mode StripeMode @default(TEST)
-
-  // encrypted Stripe Secret Key (sk_test / sk_live)
-  secretKeyEnc Bytes?
-  secretKeyIv  Bytes?
-  secretKeyTag Bytes?
-
-  // optional but nice: store publishable key too
-  publishableKey String? @db.VarChar(191)
-
-  // Stripe webhook signing secret (whsec_...)
-  webhookSecretEnc Bytes?
-  webhookSecretIv  Bytes?
-  webhookSecretTag Bytes?
-
-  currency String @default("gbp") @db.VarChar(10)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-}
-
-enum DonationStatus {
+enum donation_status {
   PENDING
   PAID
   FAILED
   CANCELED
 }
-
-model Donation {
-  id       String @id @default(cuid()) @db.VarChar(30)
-  tenantId String @db.VarChar(30)
-
-  amount   Decimal @db.Decimal(10, 2)
-  currency String  @db.VarChar(10)
-
-  isRecurring Boolean @default(false)
-  interval    String? @db.VarChar(16) // "month" | "year"
-
-  giftAid    Boolean @default(false)
-  donorName  String? @db.VarChar(191)
-  donorEmail String? @db.VarChar(191)
-
-  address1 String?  @db.VarChar(191)
-  address2 String?  @db.VarChar(191)
-  city     String?  @db.VarChar(191)
-  county   String?  @db.VarChar(191)
-  postcode String?  @db.VarChar(32)
-  country  String?  @db.VarChar(2)
-  finance  Finance?
-
-  status DonationStatus @default(PENDING)
-
-  stripeSessionId       String? @unique @db.VarChar(191)
-  stripePaymentIntentId String? @unique @db.VarChar(191)
-  stripeSubscriptionId  String? @unique @db.VarChar(191)
-
-  createdAt DateTime  @default(now())
-  paidAt    DateTime?
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, createdAt])
-  @@index([tenantId, status])
-}
-
-model DonationFund {
-  id        String   @id @default(cuid()) @db.VarChar(30)
-  tenantId  String   @db.VarChar(30)
-  name      String   @db.VarChar(191)
-  isDefault Boolean  @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, name])
-  @@index([tenantId])
-  @@index([tenantId, isDefault])
-}
-
-model TenantSubscription {
-  id                   String   @id @default(cuid())
-  tenantId             String   @unique
-  stripeCustomerId     String?  @unique
-  stripeSubscriptionId String?  @unique
-  stripePriceId        String?
-  status               String   @default("inactive") // active, trialing, past_due, canceled, unpaid, inactive
-  currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-}
-
-
