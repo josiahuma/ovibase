@@ -1,5 +1,5 @@
 "use client";
-
+// ovibase/app/donate/DonateClient.tsx
 import { useMemo, useState } from "react";
 
 type Fund = { id: string; name: string; isDefault: boolean };
@@ -11,15 +11,13 @@ export default function DonateClient({
   tenantName: string;
   funds: Fund[];
 }) {
-  const defaultFund =
-    funds.find((f) => f.isDefault) ?? funds[0] ?? null;
+  const defaultFund = funds.find((f) => f.isDefault) ?? funds[0] ?? null;
 
-  const [amount, setAmount] = useState<string>("20");
+  const [amount, setAmount] = useState<string>("");
 
   // ✅ store selected fundId (not name)
   const [fundId, setFundId] = useState<string>(defaultFund?.id ?? "");
-  const selectedFundName =
-    funds.find((f) => f.id === fundId)?.name ?? "General";
+  const selectedFundName = funds.find((f) => f.id === fundId)?.name ?? "General";
 
   const [frequency, setFrequency] = useState<"oneoff" | "month" | "year">("oneoff");
   const [giftAid, setGiftAid] = useState(false);
@@ -27,6 +25,8 @@ export default function DonateClient({
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   const [donorName, setDonorName] = useState("");
+
+  // ✅ IMPORTANT: collect donor email OUTSIDE Gift Aid so receipts can always be sent
   const [donorEmail, setDonorEmail] = useState("");
 
   const [address1, setAddress1] = useState("");
@@ -61,6 +61,7 @@ export default function DonateClient({
     // If you REQUIRE fund selection when funds exist:
     if (funds.length > 0 && !fundId) return false;
 
+    // Gift Aid requirements
     if (giftAid) {
       if (!donorName.trim()) return false;
       if (!address1.trim() || !city.trim() || !postcode.trim()) return false;
@@ -87,8 +88,10 @@ export default function DonateClient({
           recurring,
           interval: recurring ? interval : null,
           giftAid,
+
           donorName,
-          donorEmail,
+          donorEmail: donorEmail.trim() || null,
+
           address1,
           address2,
           city,
@@ -133,7 +136,7 @@ export default function DonateClient({
 
           {/* Amount */}
           <div className="mt-6">
-            <div className="text-xs font-medium text-slate-600">Amount</div>
+            <div className="text-xs font-medium text-slate-600">Enter Amount</div>
             <div className="mt-2 flex items-center rounded-lg border border-slate-200 bg-white px-3 py-3">
               <span className="mr-2 text-slate-400">£</span>
               <input
@@ -150,6 +153,24 @@ export default function DonateClient({
                 With fee cover: <span className="font-medium">£{finalAmount.toFixed(2)}</span>
               </div>
             )}
+          </div>
+
+          {/* ✅ Receipt email (always visible) */}
+          <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="text-sm font-medium text-slate-900">Receipt</div>
+            <p className="mt-1 text-xs text-slate-600">
+              Add your email to receive a donation receipt (optional).
+            </p>
+
+            <label className="mt-3 block space-y-1">
+              <div className="text-xs font-medium text-slate-600">Email address (optional)</div>
+              <input
+                value={donorEmail}
+                onChange={(e) => setDonorEmail(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+                placeholder="you@example.com"
+              />
+            </label>
           </div>
 
           {/* Fund / Frequency / Method */}
@@ -236,16 +257,6 @@ export default function DonateClient({
                       onChange={(e) => setDonorName(e.target.value)}
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
                       placeholder="Your full name"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <div className="text-xs font-medium text-slate-600">Email (optional)</div>
-                    <input
-                      value={donorEmail}
-                      onChange={(e) => setDonorEmail(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
-                      placeholder="you@example.com"
                     />
                   </label>
                 </div>

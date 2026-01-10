@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/src/lib/prisma";
 import { createSession, hashPassword } from "@/src/lib/auth";
+import { sendEmail } from "@/src/lib/email/send";
+import { WelcomeEmail } from "@/src/lib/email/templates/WelcomeEmail";
+
 
 const Schema = z.object({
   tenantName: z.string().min(2),
@@ -65,9 +68,32 @@ export async function POST(req: Request) {
   // create session for this tenant
   await createSession({ userId: user.id, tenantId: tenant.id, role: "OWNER" });
 
+  // send welcome email (do not block response)
+  const base =
+  process.env.APP_BASE_URL || "https://ovibase.com";
+
+  const loginUrl = `https://${tenant.slug}.${new URL(base).host}/login`;
+
+  try{
+    await sendEmail({
+      to: user.email,
+      subject: "Welcome to OviBase",
+      react: WelcomeEmail({
+        name: user.name || "there",
+        tenantName: tenant.name,
+        loginUrl,
+      }),
+    });
+  } catch (e) {
+    console.error("Failed to send welcome email:", e);
+  }
+
   return NextResponse.json({
     ok: true,
     tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name },
     user: { id: user.id, email: user.email, name: user.name },
   });
+
+  
+
 }

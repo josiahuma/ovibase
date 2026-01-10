@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/src/lib/prisma";
 
+// ✅ email bits (added)
+import { sendEmail } from "@/src/lib/email/send";
+import { SubscriptionActiveEmail } from "@/src/lib/email/templates/SubscriptionActiveEmail";
+import { SubscriptionCanceledEmail } from "@/src/lib/email/templates/SubscriptionCanceledEmail";
+
 export const runtime = "nodejs";
 
 // ✅ Env sanity checks (prevents silent failures)
@@ -22,6 +27,31 @@ function toDateFromUnixSeconds(v: unknown): Date | null {
   return new Date(v * 1000);
 }
 
+/** OWNER email for a tenant */
+async function getTenantOwnerEmail(tenantId: string) {
+  const ut = await prisma.userTenant.findFirst({
+    where: { tenantId, role: "OWNER" },
+    select: {
+      user: { select: { email: true } },
+      tenant: { select: { name: true } },
+    },
+  });
+
+  return {
+    email: ut?.user.email ?? null,
+    tenantName: ut?.tenant.name ?? "your workspace",
+  };
+}
+
+/** Never break webhook if email fails */
+async function safeSendEmail(args: Parameters<typeof sendEmail>[0]) {
+  try {
+    await sendEmail(args);
+  } catch (e) {
+    console.error("Subscription email failed:", e);
+  }
+}
+
 async function upsertFromSubscription(sub: Stripe.Subscription, tenantId: string) {
   const status = sub.status; // active, trialing, canceled, unpaid, etc.
   const currentPeriodEnd = toDateFromUnixSeconds((sub as any).current_period_end);
@@ -29,6 +59,12 @@ async function upsertFromSubscription(sub: Stripe.Subscription, tenantId: string
 
   const firstItem = sub.items?.data?.[0];
   const stripePriceId = firstItem?.price?.id ?? null;
+
+  // ✅ read previous status to avoid duplicate emails
+  const prev = await prisma.tenantSubscription.findUnique({
+    where: { tenantId },
+    select: { status: true },
+  });
 
   await prisma.tenantSubscription.upsert({
     where: { tenantId },
@@ -50,6 +86,31 @@ async function upsertFromSubscription(sub: Stripe.Subscription, tenantId: string
       cancelAtPeriodEnd,
     },
   });
+
+  // ✅ Only email when the status actually changes
+  const previousStatus = prev?.status ?? null;
+  if (previousStatus === status) return;
+
+  const owner = await getTenantOwnerEmail(tenantId);
+  if (!owner.email) return;
+
+  // ✅ Subscription active/trialing email
+  if (status === "active" || status === "trialing") {
+    await safeSendEmail({
+      to: owner.email,
+      subject: "Your OviBase Pro subscription is active 🎉",
+      react: SubscriptionActiveEmail({ tenantName: owner.tenantName }),
+    });
+  }
+
+  // ✅ Subscription canceled email
+  if (status === "canceled") {
+    await safeSendEmail({
+      to: owner.email,
+      subject: "Your OviBase subscription has ended",
+      react: SubscriptionCanceledEmail(),
+    });
+  }
 }
 
 export async function POST(req: Request) {
@@ -116,9 +177,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ received: true });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message || "Webhook handler failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err?.message || "Webhook handler failed" }, { status: 500 });
   }
 }

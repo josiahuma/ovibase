@@ -95,12 +95,37 @@ export async function POST(req: Request) {
             quantity: 1,
           },
     ],
+
     metadata: {
       tenantId: tenant.id,
       donationId: donation.id,
       giftAid: giftAid ? "1" : "0",
       recurring: recurring ? "1" : "0",
     },
+
+    // ✅ ADDITION #1: for one-off donation backups (payment_intent.succeeded)
+    ...(recurring
+      ? {}
+      : {
+          payment_intent_data: {
+            metadata: {
+              donationId: donation.id,
+              tenantId: tenant.id,
+            },
+          },
+        }),
+
+    // ✅ ADDITION #2: for recurring donation backups (invoice.payment_succeeded)
+    ...(recurring
+      ? {
+          subscription_data: {
+            metadata: {
+              donationId: donation.id,
+              tenantId: tenant.id,
+            },
+          },
+        }
+      : {}),
   });
 
   await prisma.donation.update({
