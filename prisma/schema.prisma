@@ -18,9 +18,11 @@ model Attendance {
   total     Int
   createdAt DateTime @default(now())
   updatedAt DateTime
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Attendance_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Attendance_tenantId_fkey")
 
   @@index([tenantId, date], map: "Attendance_tenantId_date_idx")
+  @@map("Attendance")
 }
 
 model ChurchUnitCategory {
@@ -30,10 +32,12 @@ model ChurchUnitCategory {
   alias     String
   createdAt DateTime @default(now())
   updatedAt DateTime
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "ChurchUnitCategory_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "ChurchUnitCategory_tenantId_fkey")
 
   @@unique([tenantId, alias], map: "ChurchUnitCategory_tenantId_alias_key")
   @@index([tenantId], map: "ChurchUnitCategory_tenantId_idx")
+  @@map("ChurchUnitCategory")
 }
 
 model Domain {
@@ -42,9 +46,11 @@ model Domain {
   hostname  String   @unique(map: "Domain_hostname_key")
   isPrimary Boolean  @default(true)
   createdAt DateTime @default(now())
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Domain_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Domain_tenantId_fkey")
 
   @@index([tenantId], map: "Domain_tenantId_idx")
+  @@map("Domain")
 }
 
 model Donation {
@@ -70,8 +76,11 @@ model Donation {
   createdAt             DateTime        @default(now())
   paidAt                DateTime?
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Donation_tenantId_fkey")
+
   @@index([tenantId, createdAt], map: "Donation_tenantId_createdAt_idx")
   @@index([tenantId, status], map: "Donation_tenantId_status_idx")
+  @@map("Donation")
 }
 
 model DonationFund {
@@ -81,11 +90,13 @@ model DonationFund {
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "DonationFund_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "DonationFund_tenantId_fkey")
 
   @@unique([tenantId, name], map: "DonationFund_tenantId_name_key")
   @@index([tenantId], map: "DonationFund_tenantId_idx")
   @@index([tenantId, isDefault], map: "DonationFund_tenantId_isDefault_idx")
+  @@map("DonationFund")
 }
 
 model EventCategory {
@@ -94,10 +105,12 @@ model EventCategory {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "EventCategory_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "EventCategory_tenantId_fkey")
 
   @@unique([tenantId, name], map: "EventCategory_tenantId_name_key")
   @@index([tenantId], map: "EventCategory_tenantId_idx")
+  @@map("EventCategory")
 }
 
 model ExpenseCategory {
@@ -106,10 +119,12 @@ model ExpenseCategory {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "ExpenseCategory_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "ExpenseCategory_tenantId_fkey")
 
   @@unique([tenantId, name], map: "ExpenseCategory_tenantId_name_key")
   @@index([tenantId], map: "ExpenseCategory_tenantId_idx")
+  @@map("ExpenseCategory")
 }
 
 model Finance {
@@ -123,11 +138,13 @@ model Finance {
   createdAt   DateTime @default(now())
   updatedAt   DateTime
   donationId  String?  @unique(map: "Finance_donationId_key") @db.VarChar(30)
-  tenant      tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Finance_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Finance_tenantId_fkey")
 
   @@index([tenantId, category], map: "Finance_tenantId_category_idx")
   @@index([tenantId, date], map: "Finance_tenantId_date_idx")
   @@index([tenantId, type], map: "Finance_tenantId_type_idx")
+  @@map("Finance")
 }
 
 model IncomeCategory {
@@ -136,10 +153,12 @@ model IncomeCategory {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "IncomeCategory_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "IncomeCategory_tenantId_fkey")
 
   @@unique([tenantId, name], map: "IncomeCategory_tenantId_name_key")
   @@index([tenantId], map: "IncomeCategory_tenantId_idx")
+  @@map("IncomeCategory")
 }
 
 model Leader {
@@ -153,10 +172,12 @@ model Leader {
   membersCount Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime
-  tenant       tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Leader_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Leader_tenantId_fkey")
 
   @@unique([tenantId, email], map: "Leader_tenantId_email_key")
   @@index([tenantId], map: "Leader_tenantId_idx")
+  @@map("Leader")
 }
 
 model Member {
@@ -174,11 +195,13 @@ model Member {
   customFields    Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime
-  tenant          tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Member_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "Member_tenantId_fkey")
 
   @@index([tenantId, email], map: "Member_tenantId_email_idx")
   @@index([tenantId], map: "Member_tenantId_idx")
   @@index([tenantId, mobileNumber], map: "Member_tenantId_mobileNumber_idx")
+  @@map("Member")
 }
 
 model MemberSubmission {
@@ -200,12 +223,14 @@ model MemberSubmission {
   memberId        String?                 @unique(map: "MemberSubmission_memberId_key") @db.VarChar(30)
   createdAt       DateTime                @default(now())
   updatedAt       DateTime
-  tenant          tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "MemberSubmission_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "MemberSubmission_tenantId_fkey")
 
   @@index([tenantId, createdAt], map: "MemberSubmission_tenantId_createdAt_idx")
   @@index([tenantId, email], map: "MemberSubmission_tenantId_email_idx")
   @@index([tenantId, mobileNumber], map: "MemberSubmission_tenantId_mobileNumber_idx")
   @@index([tenantId, status], map: "MemberSubmission_tenantId_status_idx")
+  @@map("MemberSubmission")
 }
 
 model SmsLog {
@@ -221,9 +246,13 @@ model SmsLog {
   tag        String?
   createdAt  DateTime         @default(now())
 
+  // You can add relations to SmsTemplate/Member later if needed.
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsLog_tenantId_fkey")
+
   @@index([tenantId, createdAt], map: "SmsLog_tenantId_createdAt_idx")
   @@index([tenantId, memberId], map: "SmsLog_tenantId_memberId_idx")
   @@index([tenantId, templateId], map: "SmsLog_tenantId_templateId_idx")
+  @@map("SmsLog")
 }
 
 model SmsProviderSetting {
@@ -238,7 +267,10 @@ model SmsProviderSetting {
   meta      Json?
   createdAt DateTime                    @default(now())
   updatedAt DateTime
-  tenant    tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsProviderSetting_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsProviderSetting_tenantId_fkey")
+
+  @@map("SmsProviderSetting")
 }
 
 model SmsTemplate {
@@ -248,9 +280,11 @@ model SmsTemplate {
   message   String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime
-  tenant    tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsTemplate_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsTemplate_tenantId_fkey")
 
   @@index([tenantId], map: "SmsTemplate_tenantId_idx")
+  @@map("SmsTemplate")
 }
 
 model StripeProviderSetting {
@@ -266,6 +300,8 @@ model StripeProviderSetting {
   currency         String                     @default("gbp") @db.VarChar(10)
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime
+
+  @@map("StripeProviderSetting")
 }
 
 model Tenant {
@@ -274,23 +310,27 @@ model Tenant {
   slug               String               @unique(map: "Tenant_slug_key") @db.VarChar(63)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime
-  attendance         attendance[]
-  churchunitcategory churchunitcategory[]
-  domain             domain[]
-  donationfund       donationfund[]
-  eventcategory      eventcategory[]
-  expensecategory    expensecategory[]
-  finance            finance[]
-  incomecategory     incomecategory[]
-  leader             leader[]
-  member             member[]
-  membersubmission   membersubmission[]
-  smsprovidersetting smsprovidersetting?
-  smstemplate        smstemplate[]
-  tenantsubscription tenantsubscription?
-  usertenant         usertenant[]
+
+  attendance         Attendance[]
+  churchunitcategory ChurchUnitCategory[]
+  domain             Domain[]
+  donationfund       DonationFund[]
+  eventcategory      EventCategory[]
+  expensecategory    ExpenseCategory[]
+  finance            Finance[]
+  incomecategory     IncomeCategory[]
+  leader             Leader[]
+  member             Member[]
+  membersubmission   MemberSubmission[]
+  smsprovidersetting SmsProviderSetting?
+  smstemplate        SmsTemplate[]
+  tenantsubscription TenantSubscription?
+  usertenant         UserTenant[]
+  donation           Donation[]
+  smslog             SmsLog[]
 
   @@index([slug], map: "Tenant_slug_idx")
+  @@map("Tenant")
 }
 
 model TenantSubscription {
@@ -304,7 +344,10 @@ model TenantSubscription {
   cancelAtPeriodEnd    Boolean   @default(false)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime
-  tenant               tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "TenantSubscription_tenantId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "TenantSubscription_tenantId_fkey")
+
+  @@map("TenantSubscription")
 }
 
 model User {
@@ -314,7 +357,10 @@ model User {
   passwordHash String
   createdAt    DateTime     @default(now())
   updatedAt    DateTime
-  usertenant   usertenant[]
+
+  usertenant UserTenant[]
+
+  @@map("User")
 }
 
 model UserTenant {
@@ -328,12 +374,14 @@ model UserTenant {
   canAttendance Boolean         @default(false)
   canFinance    Boolean         @default(false)
   canSms        Boolean         @default(false)
-  tenant        tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "UserTenant_tenantId_fkey")
-  user          user            @relation(fields: [userId], references: [id], onDelete: Cascade, map: "UserTenant_userId_fkey")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "UserTenant_tenantId_fkey")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "UserTenant_userId_fkey")
 
   @@unique([userId, tenantId], map: "UserTenant_userId_tenantId_key")
   @@index([tenantId], map: "UserTenant_tenantId_idx")
   @@index([userId], map: "UserTenant_userId_idx")
+  @@map("UserTenant")
 }
 
 enum smsprovidersetting_provider {
