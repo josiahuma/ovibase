@@ -99,7 +99,7 @@ export async function POST(req: Request) {
   }
 
   // 4) Confirm membership in this tenant
-  const membership = await prisma.UserTenant.findUnique({
+  const membership = await prisma.userTenant.findUnique({
     where: { userId_tenantId: { userId: user.id, tenantId: tenant.id } },
   });
 
