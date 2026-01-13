@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model attendance {
+model Attendance {
   id        String   @id @db.VarChar(32)
   tenantId  String   @db.VarChar(30)
   men       Int
@@ -23,7 +23,7 @@ model attendance {
   @@index([tenantId, date], map: "Attendance_tenantId_date_idx")
 }
 
-model churchunitcategory {
+model ChurchUnitCategory {
   id        String   @id @db.VarChar(32)
   tenantId  String   @db.VarChar(30)
   name      String
@@ -36,7 +36,7 @@ model churchunitcategory {
   @@index([tenantId], map: "ChurchUnitCategory_tenantId_idx")
 }
 
-model domain {
+model Domain {
   id        String   @id @db.VarChar(30)
   tenantId  String   @db.VarChar(30)
   hostname  String   @unique(map: "Domain_hostname_key")
@@ -47,7 +47,7 @@ model domain {
   @@index([tenantId], map: "Domain_tenantId_idx")
 }
 
-model donation {
+model Donation {
   id                    String          @id @db.VarChar(30)
   tenantId              String          @db.VarChar(30)
   amount                Decimal         @db.Decimal(10, 2)
@@ -74,7 +74,7 @@ model donation {
   @@index([tenantId, status], map: "Donation_tenantId_status_idx")
 }
 
-model donationfund {
+model DonationFund {
   id        String   @id @db.VarChar(30)
   tenantId  String   @db.VarChar(30)
   name      String
@@ -88,7 +88,7 @@ model donationfund {
   @@index([tenantId, isDefault], map: "DonationFund_tenantId_isDefault_idx")
 }
 
-model eventcategory {
+model EventCategory {
   id        String   @id @db.VarChar(32)
   tenantId  String   @db.VarChar(30)
   name      String
@@ -100,7 +100,7 @@ model eventcategory {
   @@index([tenantId], map: "EventCategory_tenantId_idx")
 }
 
-model expensecategory {
+model ExpenseCategory {
   id        String   @id @db.VarChar(30)
   tenantId  String   @db.VarChar(30)
   name      String
@@ -112,7 +112,7 @@ model expensecategory {
   @@index([tenantId], map: "ExpenseCategory_tenantId_idx")
 }
 
-model finance {
+model Finance {
   id          String   @id @db.VarChar(30)
   tenantId    String   @db.VarChar(30)
   amount      Decimal  @db.Decimal(10, 2)
@@ -130,7 +130,7 @@ model finance {
   @@index([tenantId, type], map: "Finance_tenantId_type_idx")
 }
 
-model incomecategory {
+model IncomeCategory {
   id        String   @id @db.VarChar(30)
   tenantId  String   @db.VarChar(30)
   name      String
@@ -142,7 +142,7 @@ model incomecategory {
   @@index([tenantId], map: "IncomeCategory_tenantId_idx")
 }
 
-model leader {
+model Leader {
   id           String   @id @db.VarChar(32)
   tenantId     String   @db.VarChar(30)
   firstName    String
@@ -159,7 +159,7 @@ model leader {
   @@index([tenantId], map: "Leader_tenantId_idx")
 }
 
-model member {
+model Member {
   id              String    @id @db.VarChar(32)
   tenantId        String    @db.VarChar(30)
   firstName       String
@@ -181,7 +181,7 @@ model member {
   @@index([tenantId, mobileNumber], map: "Member_tenantId_mobileNumber_idx")
 }
 
-model membersubmission {
+model MemberSubmission {
   id              String                  @id @db.VarChar(30)
   tenantId        String                  @db.VarChar(30)
   firstName       String
@@ -208,7 +208,7 @@ model membersubmission {
   @@index([tenantId, status], map: "MemberSubmission_tenantId_status_idx")
 }
 
-model smslog {
+model SmsLog {
   id         String           @id @db.VarChar(30)
   tenantId   String           @db.VarChar(30)
   templateId String?
@@ -226,7 +226,7 @@ model smslog {
   @@index([tenantId, templateId], map: "SmsLog_tenantId_templateId_idx")
 }
 
-model smsprovidersetting {
+model SmsProviderSetting {
   tenantId  String                      @id @db.VarChar(30)
   provider  smsprovidersetting_provider @default(TEXTLOCAL)
   apiKeyEnc Bytes?
@@ -241,7 +241,7 @@ model smsprovidersetting {
   tenant    tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "SmsProviderSetting_tenantId_fkey")
 }
 
-model smstemplate {
+model SmsTemplate {
   id        String   @id @db.VarChar(32)
   tenantId  String   @db.VarChar(30)
   name      String
@@ -253,7 +253,7 @@ model smstemplate {
   @@index([tenantId], map: "SmsTemplate_tenantId_idx")
 }
 
-model stripeprovidersetting {
+model StripeProviderSetting {
   tenantId         String                     @id @db.VarChar(30)
   mode             stripeprovidersetting_mode @default(TEST)
   secretKeyEnc     Bytes?
@@ -268,7 +268,7 @@ model stripeprovidersetting {
   updatedAt        DateTime
 }
 
-model tenant {
+model Tenant {
   id                 String               @id @db.VarChar(30)
   name               String
   slug               String               @unique(map: "Tenant_slug_key") @db.VarChar(63)
@@ -293,7 +293,7 @@ model tenant {
   @@index([slug], map: "Tenant_slug_idx")
 }
 
-model tenantsubscription {
+model TenantSubscription {
   id                   String    @id
   tenantId             String    @unique(map: "TenantSubscription_tenantId_key")
   stripeCustomerId     String?   @unique(map: "TenantSubscription_stripeCustomerId_key")
@@ -307,7 +307,7 @@ model tenantsubscription {
   tenant               tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, map: "TenantSubscription_tenantId_fkey")
 }
 
-model user {
+model User {
   id           String       @id @db.VarChar(30)
   name         String?
   email        String       @unique(map: "User_email_key")
@@ -317,7 +317,7 @@ model user {
   usertenant   usertenant[]
 }
 
-model usertenant {
+model UserTenant {
   id            String          @id @db.VarChar(30)
   userId        String          @db.VarChar(30)
   tenantId      String          @db.VarChar(30)
