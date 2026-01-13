@@ -313,7 +313,7 @@ model Tenant {
 
   attendance         Attendance[]
   churchunitcategory ChurchUnitCategory[]
-  domain             Domain[]
+  domains             Domain[]
   donationfund       DonationFund[]
   eventcategory      EventCategory[]
   expensecategory    ExpenseCategory[]
