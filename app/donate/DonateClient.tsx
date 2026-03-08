@@ -34,7 +34,7 @@ export default function DonateClient({
   const [city, setCity] = useState("");
   const [county, setCounty] = useState("");
   const [postcode, setPostcode] = useState("");
-  const [country, setCountry] = useState("GB");
+  const country ="GB";
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +97,7 @@ export default function DonateClient({
           city,
           county,
           postcode,
-          country,
+          country: giftAid ? "GB" : null,
         }),
       });
 
@@ -316,10 +316,9 @@ export default function DonateClient({
                 <label className="space-y-1">
                   <div className="text-xs font-medium text-slate-600">Country</div>
                   <input
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
-                    placeholder="GB"
+                    value="United Kingdom"
+                    disabled
+                    className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600 outline-none"
                   />
                 </label>
               </div>
